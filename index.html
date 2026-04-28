@@ -1,3 +1,7 @@
+<!-- Chosen Palette: Navy Dark with Ambient Glows (Blue, Rose, Purple) -->
+<!-- Application Structure Plan: Reverted to the preferred unified dashboard layout. It features a sticky-like header, followed by a 6-column grid of KPI cards for comprehensive immediate awareness. Below this, three distinct data tables are stacked vertically to show Important, Special, and Eradication diseases without requiring tab switching, allowing for seamless vertical scrolling and comparison. Executive Notes are placed at the bottom. This layout leverages a dark, glassmorphism aesthetic for a premium, command-center feel. -->
+<!-- Visualization & Content Choices: 1. KPI Cards -> Goal: Comprehensive top-line metrics -> Viz: HTML Divs with Unicode Icons and Glassmorphism -> Interaction: Hover scale -> Justification: Provides all crucial stats at a glance. 2. Stacked Tables -> Goal: Detailed district breakdown across all categories -> Viz: HTML Tables with CSS-based mini-bar charts (NO SVG) -> Interaction: Hover highlight -> Justification: Allows holistic geographic analysis across all disease types simultaneously. 3. Ranked Badges -> Goal: Identify hotspots -> Viz: CSS-styled circular gradients based on rank -> Justification: Clear visual hierarchy. -->
+<!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
 <!DOCTYPE html>
 <html lang="th">
 <head>
@@ -9,17 +13,20 @@
     @import url('https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700;900&display=swap');
 
     :root {
-      /* Theme: Navy Dark (Hardcoded) */
-      --bg-base: #0B1120;
-      --bg-card: rgba(30, 41, 59, 0.75);
-      --bg-header: rgba(15, 23, 42, 0.85);
-      --border-color: rgba(51, 65, 85, 0.8);
-      --text-main: #ffffff;
+      /* Theme: Serene Midnight (โทนสงบนิ่ง ล้ำลึก และพรีเมียม) */
+      --bg-base: #040A18; /* พื้นหลังสีน้ำเงินมิดไนท์ที่ลึกและสงบกว่าเดิม */
+      --bg-card: rgba(15, 23, 42, 0.65); /* กระจกโปร่งแสงที่ละมุนขึ้น */
+      --bg-header: rgba(10, 15, 30, 0.85);
+      --border-color: rgba(51, 65, 85, 0.5);
+      --text-main: #f8fafc;
       --text-muted: #94a3b8;
-      --hover-row: rgba(51, 65, 85, 0.5);
-      --glow-1: radial-gradient(circle, rgba(37,99,235,0.25) 0%, rgba(11,17,32,0) 70%);
-      --glow-2: radial-gradient(circle, rgba(225,29,72,0.25) 0%, rgba(11,17,32,0) 70%);
-      --glow-3: radial-gradient(circle, rgba(168,85,247,0.2) 0%, rgba(11,17,32,0) 70%);
+      --hover-row: rgba(30, 41, 59, 0.5);
+      
+      /* แสงเรืองแสงออโรร่าที่นุ่มนวลและสงบนิ่งขึ้น (Teal, Indigo, Sky) */
+      --glow-1: radial-gradient(circle, rgba(45, 212, 191, 0.08) 0%, transparent 70%);
+      --glow-2: radial-gradient(circle, rgba(99, 102, 241, 0.08) 0%, transparent 70%);
+      --glow-3: radial-gradient(circle, rgba(14, 165, 233, 0.06) 0%, transparent 70%);
+      
       --badge-bg: rgba(15, 23, 42, 0.8);
       --text-highlight-blue: #bfdbfe;
       --text-highlight-rose: #fecdd3;
@@ -32,7 +39,6 @@
       font-family: 'Prompt', sans-serif;
       margin: 0;
       padding: 0;
-      overflow-x: auto;
     }
     
     .t-bg { background-color: var(--bg-base); }
@@ -66,38 +72,35 @@
       -webkit-appearance: none; margin: 0; 
     }
 
+    /* สไตล์สำหรับแท่งกราฟย่อยในตาราง */
     .mini-bar {
       transition: height 0.3s ease, opacity 0.2s ease;
       border-radius: 2px 2px 0 0;
+    }
+
+    /* อนิเมชันให้แสงพื้นหลังค่อยๆ หายใจช้าๆ (สร้างความรู้สึกสงบนิ่งและพรีเมียม) */
+    @keyframes slowBreathe {
+      0%, 100% { transform: scale(1); opacity: 0.7; }
+      50% { transform: scale(1.08); opacity: 1; }
+    }
+    .ambient-glow {
+      animation: slowBreathe 20s ease-in-out infinite alternate;
     }
   </style>
 </head>
 <body class="min-h-screen relative w-full pb-16">
 
-  <!-- Loading Overlay -->
-  <div id="loading-overlay" class="fixed inset-0 z-[200] bg-[#0B1120]/80 backdrop-blur-sm flex flex-col items-center justify-center text-white">
-    <div class="w-16 h-16 border-4 border-blue-500/20 border-t-blue-500 rounded-full animate-spin mb-6"></div>
-    <h2 class="text-2xl font-bold mb-2 tracking-wide">กำลังประมวลผลข้อมูล...</h2>
-    <p class="text-slate-400">จากฐานข้อมูล Google Sheets</p>
-  </div>
-
-  <!-- Error Toast -->
-  <div id="error-toast" class="fixed top-6 left-1/2 transform -translate-x-1/2 z-[100] bg-rose-500/90 text-white px-6 py-3 rounded-full shadow-lg backdrop-blur-md items-center space-x-2 animate-bounce hidden flex">
-    <span class="text-xl">⚠️</span>
-    <span id="error-message"></span>
-  </div>
-
-  <!-- Ambient Background Effects -->
-  <div class="fixed top-[-15%] left-[-5%] w-[60vw] h-[60vw] rounded-full pointer-events-none z-0 t-glow-1 mix-blend-screen opacity-80"></div>
-  <div class="fixed bottom-[-15%] right-[-5%] w-[60vw] h-[60vw] rounded-full pointer-events-none z-0 t-glow-2 mix-blend-screen opacity-80"></div>
-  <div class="fixed top-[25%] left-[35%] w-[40vw] h-[40vw] rounded-full pointer-events-none z-0 t-glow-3 mix-blend-screen opacity-60"></div>
+  <!-- Ambient Background Effects (แสงเรืองแสงแบบสงบนิ่ง ลอยตัวนุ่มนวล) -->
+  <div class="fixed top-[-20%] left-[-10%] w-[70vw] h-[70vw] rounded-full pointer-events-none z-0 t-glow-1 ambient-glow" style="animation-delay: 0s;"></div>
+  <div class="fixed bottom-[-20%] right-[-10%] w-[70vw] h-[70vw] rounded-full pointer-events-none z-0 t-glow-2 ambient-glow" style="animation-delay: -5s;"></div>
+  <div class="fixed top-[20%] left-[20%] w-[60vw] h-[60vw] rounded-full pointer-events-none z-0 t-glow-3 ambient-glow" style="animation-delay: -10s;"></div>
   
-  <!-- Grid Pattern -->
-  <div class="fixed inset-0 z-0 pointer-events-none opacity-[0.04]" style="background-image: linear-gradient(var(--text-main) 1px, transparent 1px), linear-gradient(90deg, var(--text-main) 1px, transparent 1px); background-size: 60px 60px;"></div>
+  <!-- Dot Pattern (ลายจุดแบบมินิมอล แทนลายตารางที่ดูอึดอัด) -->
+  <div class="fixed inset-0 z-0 pointer-events-none opacity-[0.03]" style="background-image: radial-gradient(var(--text-main) 1.5px, transparent 1.5px); background-size: 36px 36px;"></div>
   <div class="fixed inset-0 z-0 pointer-events-none" style="background: radial-gradient(circle at center, transparent 0%, var(--bg-base) 100%);"></div>
 
   <!-- Main Layout Container -->
-  <div class="relative z-10 p-8 w-max min-w-full mx-auto flex flex-col space-y-8">
+  <div class="relative z-10 p-8 w-max min-w-full mx-auto flex flex-col space-y-12">
     
     <!-- Header -->
     <header class="flex justify-between items-center p-8 t-header border t-border shadow-[0_10px_30px_rgba(0,0,0,0.2)] rounded-3xl w-full">
@@ -127,30 +130,31 @@
             id="week-input"
             class="w-32 bg-transparent text-right text-7xl font-black text-transparent bg-clip-text bg-gradient-to-br from-blue-400 to-indigo-400 focus:outline-none transition-all py-1 drop-shadow-2xl cursor-text"
             title="คลิกเพื่อแก้ไขเลขสัปดาห์"
+            value="12"
           />
         </div>
       </div>
     </header>
 
-    <!-- KPI Cards Row -->
-    <div class="grid grid-cols-6 gap-6 w-full" id="kpi-container">
-      <!-- Generated by JS -->
+    <!-- KPI Cards Row (6 กล่องเรียงกัน) -->
+    <div class="grid grid-cols-6 gap-8 w-full" id="kpi-container">
+      <!-- จะถูกสร้างอัตโนมัติด้วย JavaScript ด้านล่าง -->
     </div>
 
-    <!-- Tables Container -->
-    <div id="tables-container" class="w-full flex flex-col space-y-8">
-      <!-- Generated by JS -->
+    <!-- Tables Container (ตาราง 3 ชุดเรียงต่อกัน) -->
+    <div id="tables-container" class="w-full flex flex-col space-y-12">
+      <!-- จะถูกสร้างอัตโนมัติด้วย JavaScript ด้านล่าง -->
     </div>
 
     <!-- Bottom Card - ข้อสั่งการ / ประเมินความเสี่ยง -->
     <div class="w-full">
       <div class="t-card border t-border rounded-2xl p-7 shadow-xl flex flex-col w-full">
         <div class="flex items-center space-x-3 mb-5">
-          <span class="text-2xl text-indigo-500">🛡️</span>
+          <span class="text-2xl">🛡️</span>
           <h3 class="t-text font-bold text-xl">ข้อประเมินสถานการณ์ (Executive Notes)</h3>
         </div>
         <div class="t-badge p-5 rounded-xl border t-border flex-1 space-y-4" id="notes-container">
-          <!-- Generated by JS -->
+          <!-- จะถูกสร้างอัตโนมัติด้วย JavaScript ด้านล่าง -->
         </div>
       </div>
     </div>
@@ -158,14 +162,14 @@
     <!-- Footer -->
     <div class="w-full text-center mt-12 pt-6 border-t t-border">
       <p class="t-text-muted text-sm font-medium tracking-wide">
-        จัดทำโดยกลุ่มงานควบคุมโรคติดต่อ สำนักงานสาธารณสุขจังหวัดอุดรธานี เผยแพร่ เมื่อวันที่ <span id="footer-date">--</span>
+        จัดทำโดยกลุ่มงานควบคุมโรคติดต่อ สำนักงานสาธารณสุขจังหวัดอุดรธานี เผยแพร่ เมื่อวันที่ <span id="footer-date">28 เมษายน 2569</span>
       </p>
     </div>
 
   </div>
 
   <script>
-    // --- Data Models & Fallbacks ---
+    // --- Data Models (ข้อมูลจำลองทั้งหมด) ---
     const districts = [
       'เมือง', 'กุมภวาปี', 'บ้านดุง', 'เพ็ญ', 'บ้านผือ', 'หนองหาน', 'กุดจับ', 
       'หนองวัวซอ', 'วังสามหมอ', 'น้ำโสม', 'ศรีธาตุ', 'โนนสะอาด', 'ไชยวาน', 
@@ -188,14 +192,23 @@
         { id: 2, name: 'อาหารเป็นพิษ', ytdCases: 1461, ytdDeaths: 0, weeklyCases: 111, trend: 'up', trendData: [80, 95, 85, 90, 105, 111], cases: [35, 12, 18, 4, 2, 0, 1, 8, 6, 6, 0, 2, 0, 1, 0, 0, 3, 0, 0, 2] },
         { id: 3, name: 'ไข้หวัดใหญ่', ytdCases: 2032, ytdDeaths: 2, weeklyCases: 105, trend: 'down', trendData: [150, 160, 145, 130, 115, 105], cases: [29, 1, 7, 4, 2, 1, 1, 3, 1, 9, 0, 0, 0, 5, 2, 3, 7, 1, 10, 7] },
         { id: 4, name: 'โรคปอดอักเสบ', ytdCases: 1579, ytdDeaths: 0, weeklyCases: 99, trend: 'down', trendData: [120, 135, 125, 110, 105, 99], cases: [31, 25, 6, 3, 2, 1, 1, 1, 2, 0, 0, 1, 1, 0, 2, 0, 4, 1, 4, 4] },
-        { id: 5, name: 'การได้รับวัคซีนป้องกันโรคพิษสุนัขบ้า (403)', ytdCases: 577, ytdDeaths: 0, weeklyCases: 66, trend: 'up', trendData: [40, 45, 42, 50, 55, 66], cases: [3, 52, 0, 0, 0, 0, 0, 2, 1, 0, 2, 2, 0, 0, 0, 0, 0, 0, 0, 1] }
+        { id: 5, name: 'วัคซีนป้องกันโรคพิษสุนัขบ้า (403)', ytdCases: 577, ytdDeaths: 0, weeklyCases: 66, trend: 'up', trendData: [40, 45, 42, 50, 55, 66], cases: [3, 52, 0, 0, 0, 0, 0, 2, 1, 0, 2, 2, 0, 0, 0, 0, 0, 0, 0, 1] },
+        { id: 6, name: 'โรคซิฟิลิส', ytdCases: 499, ytdDeaths: 0, weeklyCases: 40, trend: 'down', trendData: [60, 55, 58, 45, 42, 40], cases: [24, 3, 0, 2, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0] },
+        { id: 7, name: 'ไข้ไม่ทราบสาเหตุ [18]', ytdCases: 486, ytdDeaths: 0, weeklyCases: 39, trend: 'up', trendData: [20, 25, 22, 28, 35, 39], cases: [4, 8, 14, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 3, 0, 0, 4] },
+        { id: 8, name: 'โรคสุกใส หรืออีสุกอีใส', ytdCases: 208, ytdDeaths: 0, weeklyCases: 24, trend: 'down', trendData: [45, 40, 35, 30, 28, 24], cases: [15, 3, 0, 1, 0, 2, 0, 0, 0, 1, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0] },
+        { id: 9, name: 'โรคไวรัสตับอักเสบ ชนิด บี', ytdCases: 252, ytdDeaths: 0, weeklyCases: 22, trend: 'down', trendData: [30, 32, 28, 25, 24, 22], cases: [4, 1, 0, 0, 1, 1, 2, 0, 1, 0, 2, 0, 0, 2, 0, 3, 0, 0, 1, 1] },
+        { id: 10, name: 'โรคไวรัสตับอักเสบ ชนิด ซี', ytdCases: 166, ytdDeaths: 0, weeklyCases: 15, trend: 'up', trendData: [5, 8, 7, 10, 12, 15], cases: [6, 1, 1, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 0, 0, 1, 0, 0, 1, 0] }
       ],
       specialDiseases: [
         { id: 1, name: 'โรคเมลิออยโดสิส', ytdCases: 52, ytdDeaths: 0, weeklyCases: 4, trend: 'up', trendData: [2, 1, 3, 2, 5, 4], cases: [0, 2, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0] },
-        { id: 2, name: 'ไข้เลือดออก', ytdCases: 3, ytdDeaths: 0, weeklyCases: 0, trend: 'down', trendData: [1, 2, 0, 1, 0, 0], cases: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] }
+        { id: 2, name: 'ไข้เลือดออก', ytdCases: 3, ytdDeaths: 0, weeklyCases: 0, trend: 'down', trendData: [1, 2, 0, 1, 0, 0], cases: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] },
+        { id: 3, name: 'โรคสครับไทฟัส', ytdCases: 15, ytdDeaths: 0, weeklyCases: 2, trend: 'up', trendData: [0, 1, 0, 1, 2, 2], cases: [1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] },
+        { id: 4, name: 'โรคเลปโตสไปโรซิส', ytdCases: 8, ytdDeaths: 0, weeklyCases: 1, trend: 'down', trendData: [2, 0, 1, 0, 2, 1], cases: [0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] },
+        { id: 5, name: 'โรคไข้มาลาเรีย', ytdCases: 2, ytdDeaths: 0, weeklyCases: 0, trend: 'down', trendData: [0, 0, 1, 0, 0, 0], cases: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] }
       ],
       eradicationDiseases: [
-        { id: 1, name: 'อัมพาตกล้ามเนื้ออ่อนปวกเปียก', ytdCases: 6, ytdDeaths: 0, weeklyCases: 0, trend: 'down', trendData: [0, 1, 0, 0, 0, 0], cases: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] }
+        { id: 1, name: 'อัมพาตกล้ามเนื้ออ่อนปวกเปียก', ytdCases: 6, ytdDeaths: 0, weeklyCases: 0, trend: 'down', trendData: [0, 1, 0, 0, 0, 0], cases: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] },
+        { id: 2, name: 'ไข้หัดที่มีโรคแทรกซ้อน', ytdCases: 3, ytdDeaths: 0, weeklyCases: 0, trend: 'down', trendData: [0, 0, 0, 1, 0, 0], cases: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] }
       ],
       notes: [
         { type: 'danger', message: 'พบแนวโน้มการระบาดของ <strong class="t-text">โรคอุจจาระร่วงเฉียบพลัน และ อาหารเป็นพิษ</strong> สูงขึ้นอย่างมีนัยสำคัญใน <strong class="text-rose-500">อ.เมือง และ อ.กุมภวาปี</strong>' },
@@ -220,15 +233,16 @@
       return rankings;
     }
 
+    // สร้างกราฟแท่งจิ๋วในตาราง (HTML CSS)
     function createMiniBar(data, trend) {
       if (!data || data.length === 0) return '';
       const max = Math.max(...data, 1);
       const colorClass = trend === 'up' ? 'bg-rose-500' : (trend === 'down' ? 'bg-emerald-500' : 'bg-amber-500');
       
-      let html = `<div class="flex items-end gap-[2px] h-10 w-20 justify-center">`;
+      let html = `<div class="flex items-end gap-[2px] h-8 w-16 justify-center">`;
       data.forEach(val => {
         const heightPct = (val / max) * 100;
-        html += `<div class="${colorClass} mini-bar w-2 opacity-60 hover:opacity-100" style="height: ${heightPct}%" title="${val}"></div>`;
+        html += `<div class="${colorClass} mini-bar w-1.5 opacity-60 hover:opacity-100" style="height: ${heightPct}%" title="${val}"></div>`;
       });
       html += `</div>`;
       return html;
@@ -240,12 +254,48 @@
       const settings = dashboardData.settings;
       
       const cards = [
-        { title: "รายงาน D506 ในปี", val: formatNumber(settings.totalYtdCases), icon: "📄", trendText: "+162", trendIcon: "↗️", trendColor: "text-emerald-400", trendSuffix: "สัปดาห์ก่อน" },
-        { title: "ผู้เสียชีวิต D506 ในปี", val: formatNumber(settings.totalYtdDeaths), icon: "⚠️", trendText: "0", trendIcon: "➖", trendColor: "t-text-muted", trendSuffix: "สัปดาห์นี้" },
-        { title: "รายงาน D506 ในสัปดาห์", val: formatNumber(settings.totalWeeklyCases), icon: "📅", trendText: "-5%", trendIcon: "↘️", trendColor: "text-emerald-400", trendSuffix: "เทียบสัปดาห์ก่อน" },
-        { title: "ผู้เสียชีวิต D506 ในสัปดาห์", val: formatNumber(settings.totalWeeklyDeaths), icon: "📉", trendText: "0", trendIcon: "➖", trendColor: "t-text-muted", trendSuffix: "สัปดาห์ก่อน" },
-        { title: "อำเภอที่รายงานยอดเยี่ยม", val: `${String(settings.topReportDistricts).split(',').length} <span class="text-2xl t-text-muted font-medium">พื้นที่</span>`, icon: "🏆", trendText: settings.topReportDistricts, trendIcon: "", trendColor: "text-emerald-500", trendSuffix: "", isHtml: true },
-        { title: "แจ้งเหตุการณ์เฝ้าระวัง", val: `${formatNumber(settings.surveillanceEvents)} <span class="text-xl text-purple-400 font-bold">เหตุการณ์</span>`, icon: "🔔", trendText: "", trendIcon: "", trendColor: "", trendSuffix: "", isHtml: true, isPulse: true }
+        {
+          title: "รายงาน D506 ในปี", val: formatNumber(settings.totalYtdCases), icon: "📝",
+          bgClass: "from-blue-900/40 to-transparent", borderClass: "border-blue-500/40 hover:border-blue-400",
+          iconBg: "from-blue-500 to-cyan-400", iconShadow: "shadow-[0_0_25px_rgba(56,189,248,0.6)]",
+          titleColor: "text-blue-300",
+          trendText: "+162", trendIcon: "↗️", trendColor: "text-cyan-400", trendSuffix: "สัปดาห์ก่อน"
+        },
+        {
+          title: "ผู้เสียชีวิต D506 ในปี", val: formatNumber(settings.totalYtdDeaths), icon: "🚨",
+          bgClass: "from-rose-900/40 to-transparent", borderClass: "border-rose-500/40 hover:border-rose-400",
+          iconBg: "from-rose-500 to-pink-500", iconShadow: "shadow-[0_0_25px_rgba(244,63,94,0.6)]",
+          titleColor: "text-rose-300",
+          trendText: "0", trendIcon: "➖", trendColor: "text-stone-400", trendSuffix: "สัปดาห์นี้"
+        },
+        {
+          title: "รายงาน D506 สัปดาห์นี้", val: formatNumber(settings.totalWeeklyCases), icon: "📊",
+          bgClass: "from-indigo-900/40 to-transparent", borderClass: "border-indigo-500/40 hover:border-indigo-400",
+          iconBg: "from-indigo-500 to-purple-500", iconShadow: "shadow-[0_0_25px_rgba(139,92,246,0.6)]",
+          titleColor: "text-indigo-300",
+          trendText: "-5%", trendIcon: "↘️", trendColor: "text-emerald-400", trendSuffix: "เทียบสัปดาห์ก่อน"
+        },
+        {
+          title: "ผู้เสียชีวิต สัปดาห์นี้", val: formatNumber(settings.totalWeeklyDeaths), icon: "⚠️",
+          bgClass: "from-amber-900/40 to-transparent", borderClass: "border-amber-500/40 hover:border-amber-400",
+          iconBg: "from-amber-500 to-orange-400", iconShadow: "shadow-[0_0_25px_rgba(245,158,11,0.6)]",
+          titleColor: "text-amber-300",
+          trendText: "0", trendIcon: "➖", trendColor: "text-stone-400", trendSuffix: "สัปดาห์ก่อน"
+        },
+        {
+          title: "อำเภอที่รายงานยอดเยี่ยม", val: `${String(settings.topReportDistricts).split(',').length} <span class="text-xl text-stone-300 font-medium">พื้นที่</span>`, icon: "🏆",
+          bgClass: "from-emerald-900/40 to-transparent", borderClass: "border-emerald-500/40 hover:border-emerald-400",
+          iconBg: "from-emerald-500 to-teal-400", iconShadow: "shadow-[0_0_25px_rgba(16,185,129,0.6)]",
+          titleColor: "text-emerald-300",
+          trendText: settings.topReportDistricts, trendIcon: "", trendColor: "text-emerald-400", trendSuffix: "", isHtml: true
+        },
+        {
+          title: "แจ้งเหตุการณ์เฝ้าระวัง", val: `${formatNumber(settings.surveillanceEvents)} <span class="text-xl text-fuchsia-300 font-medium">เหตุการณ์</span>`, icon: "🔔",
+          bgClass: "from-fuchsia-900/40 to-transparent", borderClass: "border-fuchsia-500/40 hover:border-fuchsia-400",
+          iconBg: "from-fuchsia-500 to-pink-500", iconShadow: "shadow-[0_0_25px_rgba(217,70,239,0.6)]",
+          titleColor: "text-fuchsia-300",
+          trendText: "ติดตามใกล้ชิด", trendIcon: "👁️", trendColor: "text-fuchsia-400", trendSuffix: "", isHtml: true, isPulse: true
+        }
       ];
 
       let html = '';
@@ -253,23 +303,26 @@
         let valHTML = c.isHtml ? c.val : c.val;
         let trendHTML = '';
         if(c.trendText !== undefined && c.trendText !== '') {
-            trendHTML = `<div class="mt-6 flex items-center text-sm t-badge inline-flex px-3.5 py-2 rounded-xl border t-border relative z-10 shadow-inner">
-              <span class="${c.trendColor} font-bold mr-2 text-lg">${c.trendIcon}</span>
-              <span class="${c.trendColor} font-bold ${c.isHtml ? 'truncate' : ''}">${c.trendText}</span>
-              <span class="t-text-muted ml-2 font-medium">${c.trendSuffix}</span>
+            trendHTML = `<div class="mt-6 flex items-center text-sm bg-black/20 backdrop-blur-md px-3.5 py-2 rounded-xl border border-white/5 shadow-inner">
+              <span class="${c.trendColor} font-bold mr-2 text-lg drop-shadow-md">${c.trendIcon}</span>
+              <span class="${c.trendColor} font-bold ${c.isHtml ? 'truncate' : ''} drop-shadow-md">${c.trendText}</span>
+              <span class="text-stone-400 ml-2 font-medium">${c.trendSuffix}</span>
             </div>`;
         }
 
         html += `
-          <div class="t-card border t-border rounded-3xl p-7 shadow-2xl relative overflow-hidden group hover:-translate-y-1 transition-transform">
-            ${c.isPulse ? '<div class="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-purple-500/10 to-transparent z-0"></div>' : ''}
+          <div class="relative rounded-3xl p-6 shadow-[0_10px_30px_rgba(0,0,0,0.4)] border ${c.borderClass} overflow-hidden group hover:-translate-y-2 transition-all duration-300 bg-[#0f172a] bg-gradient-to-br ${c.bgClass}">
+            ${c.isPulse ? '<div class="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-fuchsia-500/10 to-transparent z-0 animate-pulse pointer-events-none"></div>' : ''}
+            
             <div class="flex justify-between items-start relative z-10">
-              <div>
-                <p class="${c.isPulse ? 'text-purple-400' : 't-text-muted'} text-sm font-bold mb-2 uppercase tracking-wide">${c.title}</p>
-                <h2 class="text-4xl font-black t-text tracking-tight drop-shadow-sm">${valHTML}</h2>
+              <div class="pr-2">
+                <p class="${c.titleColor} text-[13px] font-bold mb-2 uppercase tracking-wide drop-shadow-md">${c.title}</p>
+                <h2 class="text-4xl font-black text-white tracking-tight drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">${valHTML}</h2>
               </div>
-              <div class="bg-gradient-to-br from-slate-500/20 to-slate-600/5 p-3.5 rounded-2xl border border-slate-500/30 shadow-lg group-hover:scale-110 transition-transform ${c.isPulse ? 'animate-pulse' : ''}">
-                <span class="text-2xl drop-shadow-md">${c.icon}</span>
+              
+              <!-- Icon Badge with glowing effect -->
+              <div class="flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-br ${c.iconBg} ${c.iconShadow} border border-white/30 group-hover:scale-110 group-hover:rotate-3 transition-transform shrink-0">
+                <span class="text-2xl drop-shadow-[0_2px_2px_rgba(0,0,0,0.5)]">${c.icon}</span>
               </div>
             </div>
             ${trendHTML}
@@ -283,18 +336,18 @@
       if (!data || data.length === 0) return '';
       
       let html = `
-        <div class="t-card border t-border rounded-2xl shadow-2xl overflow-hidden flex flex-col w-full mb-10">
+        <div class="t-card border t-border rounded-2xl shadow-2xl overflow-hidden flex flex-col w-full mb-14">
           <table class="text-left border-collapse w-full">
             <thead class="relative z-20">
               <tr class="t-header text-[14px] tracking-wider shadow-md">
-                <th class="p-6 font-black border-b-2 border-r t-border min-w-[320px] ${titleColor} text-[20px] align-bottom">${title}</th>
-                <th class="p-5 font-bold border-b-2 border-r t-border text-center min-w-[100px] text-blue-300 align-bottom">สะสม<br/><span class="text-[12px] opacity-80 font-medium">YTD</span></th>
-                <th class="p-5 font-bold border-b-2 border-r t-border text-center min-w-[90px] text-rose-300 align-bottom t-bg-subtle-rose">ตาย<br/><span class="text-[12px] opacity-80 font-medium">YTD</span></th>
-                <th class="p-5 font-bold border-b-2 border-r t-border text-center text-emerald-300 min-w-[200px] align-bottom t-bg-subtle-blue">สัปดาห์นี้<br/><span class="text-[12px] opacity-80 font-medium">This Week Trend</span></th>
+                <th class="p-5 font-black border-b-2 border-r t-border min-w-[240px] ${titleColor} text-[18px] align-bottom">${title}</th>
+                <th class="p-5 font-bold border-b-2 border-r t-border text-center min-w-[70px] text-blue-300 align-bottom">สะสม<br/><span class="text-[11px] opacity-80 font-medium">YTD</span></th>
+                <th class="p-5 font-bold border-b-2 border-r t-border text-center min-w-[60px] text-rose-300 align-bottom t-bg-subtle-rose">ตาย<br/><span class="text-[11px] opacity-80 font-medium">YTD</span></th>
+                <th class="p-5 font-bold border-b-2 border-r t-border text-center text-emerald-300 min-w-[150px] align-bottom t-bg-subtle-blue">สัปดาห์นี้<br/><span class="text-[11px] opacity-80 font-medium">This Week Trend</span></th>
       `;
       
       districts.forEach(dist => {
-        html += `<th class="px-1 py-4 font-bold border-b-2 t-border text-center w-[72px] min-w-[72px] max-w-[72px] t-text align-bottom text-[13px] leading-tight" style="word-break: normal; overflow-wrap: normal;">${dist}</th>`;
+        html += `<th class="px-0 py-5 font-bold border-b-2 t-border text-center w-[60px] min-w-[60px] max-w-[60px] t-text align-bottom text-[12px] leading-tight" style="word-break: normal; overflow-wrap: normal;">${dist}</th>`;
       });
       
       html += `</tr></thead><tbody>`;
@@ -305,19 +358,19 @@
         
         html += `<tr class="t-hover transition-colors group">`;
         html += `
-          <td class="p-5 font-medium t-text border-r t-border whitespace-nowrap t-card">
-            <div class="flex items-center space-x-4">
-              <span class="flex items-center justify-center w-7 h-7 rounded-full t-badge t-text-muted text-sm font-bold border t-border">${row.id}</span>
-              <span class="text-[18px]">${row.name}</span>
+          <td class="p-4 font-medium t-text border-r t-border whitespace-nowrap t-card">
+            <div class="flex items-center space-x-3">
+              <span class="flex items-center justify-center w-6 h-6 rounded-full t-badge t-text-muted text-xs font-bold border t-border">${row.id}</span>
+              <span class="text-[16px]">${row.name}</span>
             </div>
           </td>
-          <td class="p-5 text-center t-text-muted border-r t-border font-medium text-[17px]">${formatNumber(row.ytdCases)}</td>
-          <td class="p-5 text-center border-r t-border t-bg-subtle-rose">
-            <span class="font-bold text-[17px] ${row.ytdDeaths > 0 ? 'text-rose-500 bg-rose-500/10 border border-rose-500/20 px-3 py-1.5 rounded-md shadow-sm' : 't-text-muted opacity-60'}">${row.ytdDeaths > 0 ? row.ytdDeaths : '-'}</span>
+          <td class="p-4 text-center t-text-muted border-r t-border font-medium text-[16px]">${formatNumber(row.ytdCases)}</td>
+          <td class="p-4 text-center border-r t-border t-bg-subtle-rose">
+            <span class="font-bold text-[16px] ${row.ytdDeaths > 0 ? 'text-rose-500 bg-rose-500/10 border border-rose-500/20 px-2 py-1 rounded-md shadow-sm' : 't-text-muted opacity-60'}">${row.ytdDeaths > 0 ? row.ytdDeaths : '-'}</span>
           </td>
-          <td class="p-4 border-r t-border t-bg-subtle-blue">
-            <div class="flex items-center justify-start space-x-5 pl-4">
-              <span class="font-black text-[24px] px-4 py-1.5 rounded-xl shadow-inner border-2 min-w-[4rem] text-center ${trendColor} bg-slate-500/10 border-slate-500/30">
+          <td class="p-3 border-r t-border t-bg-subtle-blue">
+            <div class="flex items-center justify-start space-x-3 pl-2">
+              <span class="font-black text-[20px] px-3 py-1.5 rounded-xl shadow-inner border-2 min-w-[3.5rem] text-center ${trendColor} bg-slate-500/10 border-slate-500/30">
                 ${formatNumber(row.weeklyCases)}
               </span>
               ${createMiniBar(row.trendData, row.trend)}
@@ -327,19 +380,19 @@
         
         row.cases.forEach((caseCount, index) => {
           const rank = rankings[index];
-          let badgeContent = `<span class="t-text-muted opacity-30 text-[14px]">-</span>`;
+          let badgeContent = `<span class="t-text-muted opacity-30 text-[13px]">-</span>`;
           
           if (rank === 1) {
-            badgeContent = `<div class="mx-auto w-9 h-9 flex items-center justify-center bg-gradient-to-tr from-rose-600 to-rose-400 text-white rounded-full shadow-[0_0_12px_rgba(225,29,72,0.8)] border border-rose-200 font-black text-[17px] transform hover:scale-110 transition-transform">${caseCount}</div>`;
+            badgeContent = `<div class="mx-auto w-8 h-8 flex items-center justify-center bg-gradient-to-tr from-rose-600 to-rose-400 text-white rounded-full shadow-[0_0_10px_rgba(225,29,72,0.8)] border border-rose-200 font-black text-[15px] transform hover:scale-110 transition-transform">${caseCount}</div>`;
           } else if (rank === 2) {
-            badgeContent = `<div class="mx-auto w-8 h-8 flex items-center justify-center bg-gradient-to-tr from-orange-500 to-orange-400 text-white rounded-full shadow-[0_0_8px_rgba(249,115,22,0.6)] border border-orange-200 font-bold text-[16px]">${caseCount}</div>`;
+            badgeContent = `<div class="mx-auto w-7 h-7 flex items-center justify-center bg-gradient-to-tr from-orange-500 to-orange-400 text-white rounded-full shadow-[0_0_6px_rgba(249,115,22,0.6)] border border-orange-200 font-bold text-[14px]">${caseCount}</div>`;
           } else if (rank === 3) {
-            badgeContent = `<div class="mx-auto w-7 h-7 flex items-center justify-center bg-gradient-to-tr from-amber-400 to-amber-300 text-amber-950 rounded-lg shadow-[0_0_6px_rgba(251,191,36,0.5)] border border-amber-100 font-bold text-[14px]">${caseCount}</div>`;
+            badgeContent = `<div class="mx-auto w-6 h-6 flex items-center justify-center bg-gradient-to-tr from-amber-400 to-amber-300 text-amber-950 rounded-lg shadow-[0_0_4px_rgba(251,191,36,0.5)] border border-amber-100 font-bold text-[12px]">${caseCount}</div>`;
           } else if (caseCount > 0) {
-            badgeContent = `<span class="t-text font-medium text-[16px]">${caseCount}</span>`;
+            badgeContent = `<span class="t-text font-medium text-[15px]">${caseCount}</span>`;
           }
           
-          html += `<td class="p-2 text-center border-r t-border w-[72px] min-w-[72px] max-w-[72px] last:border-r-0 align-middle">${badgeContent}</td>`;
+          html += `<td class="p-1 text-center border-r t-border w-[60px] min-w-[60px] max-w-[60px] align-middle">${badgeContent}</td>`;
         });
         
         html += `</tr>`;
@@ -372,65 +425,17 @@
       container.innerHTML = html;
     }
 
-    function updateHeaders() {
-      document.getElementById('header-week').innerText = dashboardData.settings.weekNumber;
-      document.getElementById('week-input').value = dashboardData.settings.weekNumber;
-      document.getElementById('footer-date').innerText = dashboardData.settings.publishDate || '28 เมษายน 2569';
-    }
-
-    function showError(msg) {
-      const errorToast = document.getElementById('error-toast');
-      document.getElementById('error-message').innerText = msg;
-      errorToast.classList.remove('hidden');
-      setTimeout(() => errorToast.classList.add('hidden'), 5000);
-    }
-
-    function processDataFromServer(result) {
-      if (result.status === 'success' && result.data) {
-        if (result.data.settings && Object.keys(result.data.settings).length > 0) dashboardData.settings = { ...dashboardData.settings, ...result.data.settings };
-        if (result.data.importantDiseases && result.data.importantDiseases.length > 0) dashboardData.importantDiseases = result.data.importantDiseases;
-        if (result.data.specialDiseases && result.data.specialDiseases.length > 0) dashboardData.specialDiseases = result.data.specialDiseases;
-        if (result.data.eradicationDiseases && result.data.eradicationDiseases.length > 0) dashboardData.eradicationDiseases = result.data.eradicationDiseases;
-        if (result.data.notes && result.data.notes.length > 0) dashboardData.notes = result.data.notes;
-      } else {
-         showError("เชื่อมต่อสำเร็จ แต่ไม่พบข้อมูลในตาราง");
-      }
-      
-      document.getElementById('loading-overlay').style.display = 'none';
-      updateHeaders();
+    // --- Main Logic ---
+    window.onload = () => {
       renderKPIs();
       renderTables();
       renderNotes();
-    }
 
-    // --- Main Logic ---
-    function initApp() {
-      // ตรวจสอบว่ากำลังรันอยู่ใน Google Apps Script Environment หรือไม่
-      if (typeof google !== 'undefined' && google.script && google.script.run) {
-        // ใช้ google.script.run เรียกฟังก์ชันฝั่ง Backend แทนการใช้ URL
-        google.script.run
-          .withSuccessHandler(processDataFromServer)
-          .withFailureHandler(function(error) {
-            console.error("GAS Error:", error);
-            showError("เชื่อมต่อฐานข้อมูลล้มเหลว (กำลังใช้ข้อมูลจำลอง)");
-            document.getElementById('loading-overlay').style.display = 'none';
-            updateHeaders(); renderKPIs(); renderTables(); renderNotes();
-          })
-          .getDashboardData();
-      } else {
-        // Fallback กรณีเปิดไฟล์ทดสอบในเครื่องตัวเอง
-        setTimeout(() => {
-          document.getElementById('loading-overlay').style.display = 'none';
-          updateHeaders(); renderKPIs(); renderTables(); renderNotes();
-        }, 1000);
-      }
-    }
-
-    document.getElementById('week-input').addEventListener('input', (e) => {
-      document.getElementById('header-week').innerText = e.target.value;
-    });
-
-    window.onload = initApp;
+      // อัปเดตสัปดาห์เมื่อพิมพ์ตัวเลข
+      document.getElementById('week-input').addEventListener('input', (e) => {
+        document.getElementById('header-week').innerText = e.target.value;
+      });
+    };
 
   </script>
 </body>
