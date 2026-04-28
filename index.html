@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>สถานการณ์โรคติดต่อจังหวัดอุดรธานี</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700;900&display=swap');
+
+    :root {
+      /* Theme: Navy Dark (Hardcoded) */
+      --bg-base: #0B1120;
+      --bg-card: rgba(30, 41, 59, 0.75);
+      --bg-header: rgba(15, 23, 42, 0.85);
+      --border-color: rgba(51, 65, 85, 0.8);
+      --text-main: #ffffff;
+      --text-muted: #94a3b8;
+      --hover-row: rgba(51, 65, 85, 0.5);
+      --glow-1: radial-gradient(circle, rgba(37,99,235,0.25) 0%, rgba(11,17,32,0) 70%);
+      --glow-2: radial-gradient(circle, rgba(225,29,72,0.25) 0%, rgba(11,17,32,0) 70%);
+      --glow-3: radial-gradient(circle, rgba(168,85,247,0.2) 0%, rgba(11,17,32,0) 70%);
+      --badge-bg: rgba(15, 23, 42, 0.8);
+      --text-highlight-blue: #bfdbfe;
+      --text-highlight-rose: #fecdd3;
+      --text-highlight-emerald: #d1fae5;
+    }
+
+    body, html {
+      background-color: var(--bg-base) !important;
+      color: var(--text-main);
+      font-family: 'Prompt', sans-serif;
+      margin: 0;
+      padding: 0;
+      overflow-x: auto;
+    }
+    
+    .t-bg { background-color: var(--bg-base); }
+    .t-card { 
+      background-color: var(--bg-card); 
+      backdrop-filter: blur(16px); 
+      -webkit-backdrop-filter: blur(16px); 
+    }
+    .t-header { 
+      background-color: var(--bg-header); 
+      backdrop-filter: blur(20px); 
+      -webkit-backdrop-filter: blur(20px); 
+    }
+    .t-border { border-color: var(--border-color); }
+    .t-text { color: var(--text-main); }
+    .t-text-muted { color: var(--text-muted); }
+    .t-hover:hover { background-color: var(--hover-row); }
+    .t-glow-1 { background: var(--glow-1); }
+    .t-glow-2 { background: var(--glow-2); }
+    .t-glow-3 { background: var(--glow-3); }
+    .t-badge { background-color: var(--badge-bg); }
+    
+    .t-bg-subtle-rose { background-color: rgba(225,29,72,0.03); }
+    .t-bg-subtle-blue { background-color: rgba(37,99,235,0.03); }
+
+    tbody tr { border-bottom: 1px solid var(--border-color); }
+    tbody tr:last-child { border-bottom: none; }
+    
+    input[type="number"]::-webkit-inner-spin-button, 
+    input[type="number"]::-webkit-outer-spin-button { 
+      -webkit-appearance: none; margin: 0; 
+    }
+
+    .mini-bar {
+      transition: height 0.3s ease, opacity 0.2s ease;
+      border-radius: 2px 2px 0 0;
+    }
+  </style>
+</head>
+<body class="min-h-screen relative w-full pb-16">
+
+  <!-- Loading Overlay -->
+  <div id="loading-overlay" class="fixed inset-0 z-[200] bg-[#0B1120]/80 backdrop-blur-sm flex flex-col items-center justify-center text-white">
+    <div class="w-16 h-16 border-4 border-blue-500/20 border-t-blue-500 rounded-full animate-spin mb-6"></div>
+    <h2 class="text-2xl font-bold mb-2 tracking-wide">กำลังประมวลผลข้อมูล...</h2>
+    <p class="text-slate-400">จากฐานข้อมูล Google Sheets</p>
+  </div>
+
+  <!-- Error Toast -->
+  <div id="error-toast" class="fixed top-6 left-1/2 transform -translate-x-1/2 z-[100] bg-rose-500/90 text-white px-6 py-3 rounded-full shadow-lg backdrop-blur-md items-center space-x-2 animate-bounce hidden flex">
+    <span class="text-xl">⚠️</span>
+    <span id="error-message"></span>
+  </div>
+
+  <!-- Ambient Background Effects -->
+  <div class="fixed top-[-15%] left-[-5%] w-[60vw] h-[60vw] rounded-full pointer-events-none z-0 t-glow-1 mix-blend-screen opacity-80"></div>
+  <div class="fixed bottom-[-15%] right-[-5%] w-[60vw] h-[60vw] rounded-full pointer-events-none z-0 t-glow-2 mix-blend-screen opacity-80"></div>
+  <div class="fixed top-[25%] left-[35%] w-[40vw] h-[40vw] rounded-full pointer-events-none z-0 t-glow-3 mix-blend-screen opacity-60"></div>
+  
+  <!-- Grid Pattern -->
+  <div class="fixed inset-0 z-0 pointer-events-none opacity-[0.04]" style="background-image: linear-gradient(var(--text-main) 1px, transparent 1px), linear-gradient(90deg, var(--text-main) 1px, transparent 1px); background-size: 60px 60px;"></div>
+  <div class="fixed inset-0 z-0 pointer-events-none" style="background: radial-gradient(circle at center, transparent 0%, var(--bg-base) 100%);"></div>
+
+  <!-- Main Layout Container -->
+  <div class="relative z-10 p-8 w-max min-w-full mx-auto flex flex-col space-y-8">
+    
+    <!-- Header -->
+    <header class="flex justify-between items-center p-8 t-header border t-border shadow-[0_10px_30px_rgba(0,0,0,0.2)] rounded-3xl w-full">
+      <div class="flex items-center space-x-6 pl-2">
+        <div class="bg-white p-2.5 rounded-full shadow-[0_0_30px_rgba(59,130,246,0.6)] flex items-center justify-center relative w-[85px] h-[85px] shrink-0 border-4 border-blue-50/90">
+          <img 
+            src="https://upload.wikimedia.org/wikipedia/commons/thumb/1/15/Seal_of_the_Ministry_of_Public_Health_of_Thailand.svg/240px-Seal_of_the_Ministry_of_Public_Health_of_Thailand.svg.png" 
+            alt="Ministry of Public Health Logo" 
+            class="w-[85%] h-[85%] object-contain"
+            onerror="this.onerror=null; this.src='https://via.placeholder.com/80/ffffff/059669?text=MOPH';"
+          />
+        </div>
+        
+        <div>
+          <h1 class="text-4xl font-black t-text flex items-center space-x-3 drop-shadow-lg tracking-wide">
+            <span>สถานการณ์โรคติดต่อจังหวัดอุดรธานี ปี 2569</span>
+          </h1>
+          <p class="t-text-muted mt-2 text-xl font-bold tracking-wide">สรุปผลสัปดาห์ระบาดวิทยา ที่ 1 - <span id="header-week">12</span></p>
+        </div>
+      </div>
+      
+      <div class="flex items-center pr-4">
+        <div class="flex flex-col items-end">
+          <span class="t-text-muted text-base font-black uppercase tracking-widest mb-1">สัปดาห์ที่ / Week</span>
+          <input 
+            type="number" 
+            id="week-input"
+            class="w-32 bg-transparent text-right text-7xl font-black text-transparent bg-clip-text bg-gradient-to-br from-blue-400 to-indigo-400 focus:outline-none transition-all py-1 drop-shadow-2xl cursor-text"
+            title="คลิกเพื่อแก้ไขเลขสัปดาห์"
+          />
+        </div>
+      </div>
+    </header>
+
+    <!-- KPI Cards Row -->
+    <div class="grid grid-cols-6 gap-6 w-full" id="kpi-container">
+      <!-- Generated by JS -->
+    </div>
+
+    <!-- Tables Container -->
+    <div id="tables-container" class="w-full flex flex-col space-y-8">
+      <!-- Generated by JS -->
+    </div>
+
+    <!-- Bottom Card - ข้อสั่งการ / ประเมินความเสี่ยง -->
+    <div class="w-full">
+      <div class="t-card border t-border rounded-2xl p-7 shadow-xl flex flex-col w-full">
+        <div class="flex items-center space-x-3 mb-5">
+          <span class="text-2xl text-indigo-500">🛡️</span>
+          <h3 class="t-text font-bold text-xl">ข้อประเมินสถานการณ์ (Executive Notes)</h3>
+        </div>
+        <div class="t-badge p-5 rounded-xl border t-border flex-1 space-y-4" id="notes-container">
+          <!-- Generated by JS -->
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="w-full text-center mt-12 pt-6 border-t t-border">
+      <p class="t-text-muted text-sm font-medium tracking-wide">
+        จัดทำโดยกลุ่มงานควบคุมโรคติดต่อ สำนักงานสาธารณสุขจังหวัดอุดรธานี เผยแพร่ เมื่อวันที่ <span id="footer-date">--</span>
+      </p>
+    </div>
+
+  </div>
+
+  <script>
+    // --- Data Models & Fallbacks ---
+    const districts = [
+      'เมือง', 'กุมภวาปี', 'บ้านดุง', 'เพ็ญ', 'บ้านผือ', 'หนองหาน', 'กุดจับ', 
+      'หนองวัวซอ', 'วังสามหมอ', 'น้ำโสม', 'ศรีธาตุ', 'โนนสะอาด', 'ไชยวาน', 
+      'ทุ่งฝน', 'สร้างคอม', 'นายูง', 'หนองแสง', 'พิบูลย์รักษ์', 'กู่แก้ว', 'ประจักษ์ฯ'
+    ];
+
+    let dashboardData = {
+      settings: {
+        weekNumber: '12',
+        publishDate: '28 เมษายน 2569',
+        totalYtdCases: 2202,
+        totalYtdDeaths: 2,
+        totalWeeklyCases: 660,
+        totalWeeklyDeaths: 0,
+        topReportDistricts: 'เพ็ญ, หนองหาน, วังสามหมอ',
+        surveillanceEvents: 12
+      },
+      importantDiseases: [
+        { id: 1, name: 'โรคอุจจาระร่วงเฉียบพลัน [02]', ytdCases: 2202, ytdDeaths: 0, weeklyCases: 162, trend: 'up', trendData: [110, 125, 140, 130, 150, 162], cases: [13, 47, 24, 2, 2, 0, 2, 11, 11, 1, 3, 19, 2, 2, 0, 0, 7, 0, 0, 7] },
+        { id: 2, name: 'อาหารเป็นพิษ', ytdCases: 1461, ytdDeaths: 0, weeklyCases: 111, trend: 'up', trendData: [80, 95, 85, 90, 105, 111], cases: [35, 12, 18, 4, 2, 0, 1, 8, 6, 6, 0, 2, 0, 1, 0, 0, 3, 0, 0, 2] },
+        { id: 3, name: 'ไข้หวัดใหญ่', ytdCases: 2032, ytdDeaths: 2, weeklyCases: 105, trend: 'down', trendData: [150, 160, 145, 130, 115, 105], cases: [29, 1, 7, 4, 2, 1, 1, 3, 1, 9, 0, 0, 0, 5, 2, 3, 7, 1, 10, 7] },
+        { id: 4, name: 'โรคปอดอักเสบ', ytdCases: 1579, ytdDeaths: 0, weeklyCases: 99, trend: 'down', trendData: [120, 135, 125, 110, 105, 99], cases: [31, 25, 6, 3, 2, 1, 1, 1, 2, 0, 0, 1, 1, 0, 2, 0, 4, 1, 4, 4] },
+        { id: 5, name: 'การได้รับวัคซีนป้องกันโรคพิษสุนัขบ้า (403)', ytdCases: 577, ytdDeaths: 0, weeklyCases: 66, trend: 'up', trendData: [40, 45, 42, 50, 55, 66], cases: [3, 52, 0, 0, 0, 0, 0, 2, 1, 0, 2, 2, 0, 0, 0, 0, 0, 0, 0, 1] }
+      ],
+      specialDiseases: [
+        { id: 1, name: 'โรคเมลิออยโดสิส', ytdCases: 52, ytdDeaths: 0, weeklyCases: 4, trend: 'up', trendData: [2, 1, 3, 2, 5, 4], cases: [0, 2, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0] },
+        { id: 2, name: 'ไข้เลือดออก', ytdCases: 3, ytdDeaths: 0, weeklyCases: 0, trend: 'down', trendData: [1, 2, 0, 1, 0, 0], cases: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] }
+      ],
+      eradicationDiseases: [
+        { id: 1, name: 'อัมพาตกล้ามเนื้ออ่อนปวกเปียก', ytdCases: 6, ytdDeaths: 0, weeklyCases: 0, trend: 'down', trendData: [0, 1, 0, 0, 0, 0], cases: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] }
+      ],
+      notes: [
+        { type: 'danger', message: 'พบแนวโน้มการระบาดของ <strong class="t-text">โรคอุจจาระร่วงเฉียบพลัน และ อาหารเป็นพิษ</strong> สูงขึ้นอย่างมีนัยสำคัญใน <strong class="text-rose-500">อ.เมือง และ อ.กุมภวาปี</strong>' },
+        { type: 'warning', message: 'โปรดพิจารณาสั่งการทีมสอบสวนโรค (JIT) ลงพื้นที่ตรวจสอบแหล่งน้ำและสุขาภิบาลอาหารในสถานศึกษา' }
+      ]
+    };
+
+    // --- Helper Functions ---
+    function formatNumber(num) {
+      return Number(num).toLocaleString('th-TH');
+    }
+
+    function getTopRankings(cases) {
+      const uniqueTopValues = [...new Set(cases)].filter(val => val > 0).sort((a, b) => b - a).slice(0, 3);
+      const rankings = {};
+      cases.forEach((val, idx) => {
+        if (val > 0) {
+          const rank = uniqueTopValues.indexOf(val);
+          if (rank !== -1) rankings[idx] = rank + 1;
+        }
+      });
+      return rankings;
+    }
+
+    function createMiniBar(data, trend) {
+      if (!data || data.length === 0) return '';
+      const max = Math.max(...data, 1);
+      const colorClass = trend === 'up' ? 'bg-rose-500' : (trend === 'down' ? 'bg-emerald-500' : 'bg-amber-500');
+      
+      let html = `<div class="flex items-end gap-[2px] h-10 w-20 justify-center">`;
+      data.forEach(val => {
+        const heightPct = (val / max) * 100;
+        html += `<div class="${colorClass} mini-bar w-2 opacity-60 hover:opacity-100" style="height: ${heightPct}%" title="${val}"></div>`;
+      });
+      html += `</div>`;
+      return html;
+    }
+
+    // --- Rendering Functions ---
+    function renderKPIs() {
+      const kpiContainer = document.getElementById('kpi-container');
+      const settings = dashboardData.settings;
+      
+      const cards = [
+        { title: "รายงาน D506 ในปี", val: formatNumber(settings.totalYtdCases), icon: "📄", trendText: "+162", trendIcon: "↗️", trendColor: "text-emerald-400", trendSuffix: "สัปดาห์ก่อน" },
+        { title: "ผู้เสียชีวิต D506 ในปี", val: formatNumber(settings.totalYtdDeaths), icon: "⚠️", trendText: "0", trendIcon: "➖", trendColor: "t-text-muted", trendSuffix: "สัปดาห์นี้" },
+        { title: "รายงาน D506 ในสัปดาห์", val: formatNumber(settings.totalWeeklyCases), icon: "📅", trendText: "-5%", trendIcon: "↘️", trendColor: "text-emerald-400", trendSuffix: "เทียบสัปดาห์ก่อน" },
+        { title: "ผู้เสียชีวิต D506 ในสัปดาห์", val: formatNumber(settings.totalWeeklyDeaths), icon: "📉", trendText: "0", trendIcon: "➖", trendColor: "t-text-muted", trendSuffix: "สัปดาห์ก่อน" },
+        { title: "อำเภอที่รายงานยอดเยี่ยม", val: `${String(settings.topReportDistricts).split(',').length} <span class="text-2xl t-text-muted font-medium">พื้นที่</span>`, icon: "🏆", trendText: settings.topReportDistricts, trendIcon: "", trendColor: "text-emerald-500", trendSuffix: "", isHtml: true },
+        { title: "แจ้งเหตุการณ์เฝ้าระวัง", val: `${formatNumber(settings.surveillanceEvents)} <span class="text-xl text-purple-400 font-bold">เหตุการณ์</span>`, icon: "🔔", trendText: "", trendIcon: "", trendColor: "", trendSuffix: "", isHtml: true, isPulse: true }
+      ];
+
+      let html = '';
+      cards.forEach(c => {
+        let valHTML = c.isHtml ? c.val : c.val;
+        let trendHTML = '';
+        if(c.trendText !== undefined && c.trendText !== '') {
+            trendHTML = `<div class="mt-6 flex items-center text-sm t-badge inline-flex px-3.5 py-2 rounded-xl border t-border relative z-10 shadow-inner">
+              <span class="${c.trendColor} font-bold mr-2 text-lg">${c.trendIcon}</span>
+              <span class="${c.trendColor} font-bold ${c.isHtml ? 'truncate' : ''}">${c.trendText}</span>
+              <span class="t-text-muted ml-2 font-medium">${c.trendSuffix}</span>
+            </div>`;
+        }
+
+        html += `
+          <div class="t-card border t-border rounded-3xl p-7 shadow-2xl relative overflow-hidden group hover:-translate-y-1 transition-transform">
+            ${c.isPulse ? '<div class="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-purple-500/10 to-transparent z-0"></div>' : ''}
+            <div class="flex justify-between items-start relative z-10">
+              <div>
+                <p class="${c.isPulse ? 'text-purple-400' : 't-text-muted'} text-sm font-bold mb-2 uppercase tracking-wide">${c.title}</p>
+                <h2 class="text-4xl font-black t-text tracking-tight drop-shadow-sm">${valHTML}</h2>
+              </div>
+              <div class="bg-gradient-to-br from-slate-500/20 to-slate-600/5 p-3.5 rounded-2xl border border-slate-500/30 shadow-lg group-hover:scale-110 transition-transform ${c.isPulse ? 'animate-pulse' : ''}">
+                <span class="text-2xl drop-shadow-md">${c.icon}</span>
+              </div>
+            </div>
+            ${trendHTML}
+          </div>
+        `;
+      });
+      kpiContainer.innerHTML = html;
+    }
+
+    function generateTableHTML(title, data, titleColor) {
+      if (!data || data.length === 0) return '';
+      
+      let html = `
+        <div class="t-card border t-border rounded-2xl shadow-2xl overflow-hidden flex flex-col w-full mb-10">
+          <table class="text-left border-collapse w-full">
+            <thead class="relative z-20">
+              <tr class="t-header text-[14px] tracking-wider shadow-md">
+                <th class="p-6 font-black border-b-2 border-r t-border min-w-[320px] ${titleColor} text-[20px] align-bottom">${title}</th>
+                <th class="p-5 font-bold border-b-2 border-r t-border text-center min-w-[100px] text-blue-300 align-bottom">สะสม<br/><span class="text-[12px] opacity-80 font-medium">YTD</span></th>
+                <th class="p-5 font-bold border-b-2 border-r t-border text-center min-w-[90px] text-rose-300 align-bottom t-bg-subtle-rose">ตาย<br/><span class="text-[12px] opacity-80 font-medium">YTD</span></th>
+                <th class="p-5 font-bold border-b-2 border-r t-border text-center text-emerald-300 min-w-[200px] align-bottom t-bg-subtle-blue">สัปดาห์นี้<br/><span class="text-[12px] opacity-80 font-medium">This Week Trend</span></th>
+      `;
+      
+      districts.forEach(dist => {
+        html += `<th class="px-1 py-4 font-bold border-b-2 t-border text-center w-[72px] min-w-[72px] max-w-[72px] t-text align-bottom text-[13px] leading-tight" style="word-break: normal; overflow-wrap: normal;">${dist}</th>`;
+      });
+      
+      html += `</tr></thead><tbody>`;
+      
+      data.forEach(row => {
+        const rankings = getTopRankings(row.cases);
+        const trendColor = row.trend === 'up' ? 'text-rose-500' : (row.trend === 'down' ? 'text-emerald-500' : 'text-amber-500');
+        
+        html += `<tr class="t-hover transition-colors group">`;
+        html += `
+          <td class="p-5 font-medium t-text border-r t-border whitespace-nowrap t-card">
+            <div class="flex items-center space-x-4">
+              <span class="flex items-center justify-center w-7 h-7 rounded-full t-badge t-text-muted text-sm font-bold border t-border">${row.id}</span>
+              <span class="text-[18px]">${row.name}</span>
+            </div>
+          </td>
+          <td class="p-5 text-center t-text-muted border-r t-border font-medium text-[17px]">${formatNumber(row.ytdCases)}</td>
+          <td class="p-5 text-center border-r t-border t-bg-subtle-rose">
+            <span class="font-bold text-[17px] ${row.ytdDeaths > 0 ? 'text-rose-500 bg-rose-500/10 border border-rose-500/20 px-3 py-1.5 rounded-md shadow-sm' : 't-text-muted opacity-60'}">${row.ytdDeaths > 0 ? row.ytdDeaths : '-'}</span>
+          </td>
+          <td class="p-4 border-r t-border t-bg-subtle-blue">
+            <div class="flex items-center justify-start space-x-5 pl-4">
+              <span class="font-black text-[24px] px-4 py-1.5 rounded-xl shadow-inner border-2 min-w-[4rem] text-center ${trendColor} bg-slate-500/10 border-slate-500/30">
+                ${formatNumber(row.weeklyCases)}
+              </span>
+              ${createMiniBar(row.trendData, row.trend)}
+            </div>
+          </td>
+        `;
+        
+        row.cases.forEach((caseCount, index) => {
+          const rank = rankings[index];
+          let badgeContent = `<span class="t-text-muted opacity-30 text-[14px]">-</span>`;
+          
+          if (rank === 1) {
+            badgeContent = `<div class="mx-auto w-9 h-9 flex items-center justify-center bg-gradient-to-tr from-rose-600 to-rose-400 text-white rounded-full shadow-[0_0_12px_rgba(225,29,72,0.8)] border border-rose-200 font-black text-[17px] transform hover:scale-110 transition-transform">${caseCount}</div>`;
+          } else if (rank === 2) {
+            badgeContent = `<div class="mx-auto w-8 h-8 flex items-center justify-center bg-gradient-to-tr from-orange-500 to-orange-400 text-white rounded-full shadow-[0_0_8px_rgba(249,115,22,0.6)] border border-orange-200 font-bold text-[16px]">${caseCount}</div>`;
+          } else if (rank === 3) {
+            badgeContent = `<div class="mx-auto w-7 h-7 flex items-center justify-center bg-gradient-to-tr from-amber-400 to-amber-300 text-amber-950 rounded-lg shadow-[0_0_6px_rgba(251,191,36,0.5)] border border-amber-100 font-bold text-[14px]">${caseCount}</div>`;
+          } else if (caseCount > 0) {
+            badgeContent = `<span class="t-text font-medium text-[16px]">${caseCount}</span>`;
+          }
+          
+          html += `<td class="p-2 text-center border-r t-border w-[72px] min-w-[72px] max-w-[72px] last:border-r-0 align-middle">${badgeContent}</td>`;
+        });
+        
+        html += `</tr>`;
+      });
+      
+      html += `</tbody></table></div>`;
+      return html;
+    }
+
+    function renderTables() {
+      const container = document.getElementById('tables-container');
+      container.innerHTML = 
+        generateTableHTML("กลุ่มโรคติดต่อที่สำคัญ", dashboardData.importantDiseases, "t-text") +
+        generateTableHTML("กลุ่มโรคเฝ้าระวังเป็นพิเศษ", dashboardData.specialDiseases, "text-rose-500") +
+        generateTableHTML("กลุ่มโรคกำจัด / กวาดล้าง", dashboardData.eradicationDiseases, "text-amber-500");
+    }
+
+    function renderNotes() {
+      const container = document.getElementById('notes-container');
+      let html = '';
+      dashboardData.notes.forEach(note => {
+        const dotColor = note.type === 'danger' ? 'bg-rose-500' : (note.type === 'warning' ? 'bg-amber-500' : 'bg-emerald-500');
+        html += `
+          <div class="flex items-start space-x-3">
+            <div class="w-2 h-2 mt-2 ${dotColor} rounded-full shrink-0 shadow-[0_0_8px_var(--bg-base)]"></div>
+            <p class="t-text-muted text-[16px] leading-relaxed">${note.message}</p>
+          </div>
+        `;
+      });
+      container.innerHTML = html;
+    }
+
+    function updateHeaders() {
+      document.getElementById('header-week').innerText = dashboardData.settings.weekNumber;
+      document.getElementById('week-input').value = dashboardData.settings.weekNumber;
+      document.getElementById('footer-date').innerText = dashboardData.settings.publishDate || '28 เมษายน 2569';
+    }
+
+    function showError(msg) {
+      const errorToast = document.getElementById('error-toast');
+      document.getElementById('error-message').innerText = msg;
+      errorToast.classList.remove('hidden');
+      setTimeout(() => errorToast.classList.add('hidden'), 5000);
+    }
+
+    function processDataFromServer(result) {
+      if (result.status === 'success' && result.data) {
+        if (result.data.settings && Object.keys(result.data.settings).length > 0) dashboardData.settings = { ...dashboardData.settings, ...result.data.settings };
+        if (result.data.importantDiseases && result.data.importantDiseases.length > 0) dashboardData.importantDiseases = result.data.importantDiseases;
+        if (result.data.specialDiseases && result.data.specialDiseases.length > 0) dashboardData.specialDiseases = result.data.specialDiseases;
+        if (result.data.eradicationDiseases && result.data.eradicationDiseases.length > 0) dashboardData.eradicationDiseases = result.data.eradicationDiseases;
+        if (result.data.notes && result.data.notes.length > 0) dashboardData.notes = result.data.notes;
+      } else {
+         showError("เชื่อมต่อสำเร็จ แต่ไม่พบข้อมูลในตาราง");
+      }
+      
+      document.getElementById('loading-overlay').style.display = 'none';
+      updateHeaders();
+      renderKPIs();
+      renderTables();
+      renderNotes();
+    }
+
+    // --- Main Logic ---
+    function initApp() {
+      // ตรวจสอบว่ากำลังรันอยู่ใน Google Apps Script Environment หรือไม่
+      if (typeof google !== 'undefined' && google.script && google.script.run) {
+        // ใช้ google.script.run เรียกฟังก์ชันฝั่ง Backend แทนการใช้ URL
+        google.script.run
+          .withSuccessHandler(processDataFromServer)
+          .withFailureHandler(function(error) {
+            console.error("GAS Error:", error);
+            showError("เชื่อมต่อฐานข้อมูลล้มเหลว (กำลังใช้ข้อมูลจำลอง)");
+            document.getElementById('loading-overlay').style.display = 'none';
+            updateHeaders(); renderKPIs(); renderTables(); renderNotes();
+          })
+          .getDashboardData();
+      } else {
+        // Fallback กรณีเปิดไฟล์ทดสอบในเครื่องตัวเอง
+        setTimeout(() => {
+          document.getElementById('loading-overlay').style.display = 'none';
+          updateHeaders(); renderKPIs(); renderTables(); renderNotes();
+        }, 1000);
+      }
+    }
+
+    document.getElementById('week-input').addEventListener('input', (e) => {
+      document.getElementById('header-week').innerText = e.target.value;
+    });
+
+    window.onload = initApp;
+
+  </script>
+</body>
+</html>
