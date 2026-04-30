@@ -1,720 +1,463 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  Users, AlertTriangle, Calendar, Map as MapIcon, 
-  TrendingUp, TrendingDown, Minus, Activity, Flame, ShieldAlert,
-  Award, BellRing, FileSpreadsheet, Loader2
-} from 'lucide-react';
-
-// รายชื่อ 20 อำเภอของจังหวัดอุดรธานี
-const districts = [
-  'เมือง', 'กุมภวาปี', 'บ้านดุง', 'เพ็ญ', 'บ้านผือ', 'หนองหาน', 'กุดจับ', 
-  'หนองวัวซอ', 'วังสามหมอ', 'น้ำโสม', 'ศรีธาตุ', 'โนนสะอาด', 'ไชยวาน', 
-  'ทุ่งฝน', 'สร้างคอม', 'นายูง', 'หนองแสง', 'พิบูลย์รักษ์', 'กู่แก้ว', 'ประจักษ์ฯ'
-];
-
-// ข้อมูลจำลองสำหรับกรณีที่ Google Sheets ยังไม่มีข้อมูล (Fallback Data)
-const mockImportantData = [
-  { 
-    id: 1, name: 'โรคอุจจาระร่วงเฉียบพลัน [02]', ytdCases: 2202, ytdDeaths: 0, weeklyCases: 162, trend: 'up', 
-    trendData: [110, 125, 140, 130, 150, 162],
-    cases: [13, 47, 24, 2, 2, 0, 2, 11, 11, 1, 3, 19, 2, 2, 0, 0, 7, 0, 0, 7] 
-  },
-  { 
-    id: 2, name: 'อาหารเป็นพิษ', ytdCases: 1461, ytdDeaths: 0, weeklyCases: 111, trend: 'up', 
-    trendData: [80, 95, 85, 90, 105, 111],
-    cases: [35, 12, 18, 4, 2, 0, 1, 8, 6, 6, 0, 2, 0, 1, 0, 0, 3, 0, 0, 2] 
-  },
-  { 
-    id: 3, name: 'ไข้หวัดใหญ่', ytdCases: 2032, ytdDeaths: 2, weeklyCases: 105, trend: 'down', 
-    trendData: [150, 160, 145, 130, 115, 105],
-    cases: [29, 1, 7, 4, 2, 1, 1, 3, 1, 9, 0, 0, 0, 5, 2, 3, 7, 1, 10, 7] 
-  },
-  { 
-    id: 4, name: 'โรคปอดอักเสบ', ytdCases: 1579, ytdDeaths: 0, weeklyCases: 99, trend: 'down', 
-    trendData: [120, 135, 125, 110, 105, 99],
-    cases: [31, 25, 6, 3, 2, 1, 1, 1, 2, 0, 0, 1, 1, 0, 2, 0, 4, 1, 4, 4] 
-  },
-  { 
-    id: 5, name: 'การได้รับวัคซีนป้องกันโรคพิษสุนัขบ้า (403)', ytdCases: 577, ytdDeaths: 0, weeklyCases: 66, trend: 'up', 
-    trendData: [40, 45, 42, 50, 55, 66],
-    cases: [3, 52, 0, 0, 0, 0, 0, 2, 1, 0, 2, 2, 0, 0, 0, 0, 0, 0, 0, 1] 
-  },
-  { 
-    id: 6, name: 'โรคซิฟิลิส', ytdCases: 499, ytdDeaths: 0, weeklyCases: 40, trend: 'down', 
-    trendData: [60, 55, 58, 45, 42, 40],
-    cases: [24, 3, 0, 2, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0] 
-  },
-  { 
-    id: 7, name: 'ไข้ไม่ทราบสาเหตุ [18]', ytdCases: 486, ytdDeaths: 0, weeklyCases: 39, trend: 'up', 
-    trendData: [20, 25, 22, 28, 35, 39],
-    cases: [4, 8, 14, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 3, 0, 0, 4] 
-  },
-  { 
-    id: 8, name: 'โรคสุกใส หรือโรคอีสุกอีใส', ytdCases: 208, ytdDeaths: 0, weeklyCases: 24, trend: 'down', 
-    trendData: [45, 40, 35, 30, 28, 24],
-    cases: [15, 3, 0, 1, 0, 2, 0, 0, 0, 1, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0] 
-  },
-  { 
-    id: 9, name: 'โรคไวรัสตับอักเสบเฉียบพลัน ชนิด บี', ytdCases: 252, ytdDeaths: 0, weeklyCases: 22, trend: 'down', 
-    trendData: [30, 32, 28, 25, 24, 22],
-    cases: [4, 1, 0, 0, 1, 1, 2, 0, 1, 0, 2, 0, 0, 2, 0, 3, 0, 0, 1, 1] 
-  },
-  { 
-    id: 10, name: 'โรคไวรัสตับอักเสบเฉียบพลัน ชนิด ซี', ytdCases: 166, ytdDeaths: 0, weeklyCases: 15, trend: 'up', 
-    trendData: [5, 8, 7, 10, 12, 15],
-    cases: [6, 1, 1, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 0, 0, 1, 0, 0, 1, 0] 
-  },
-];
-
-const mockSpecialData = [
-  { 
-    id: 1, name: 'โรคเมลิออยโดสิส', ytdCases: 52, ytdDeaths: 0, weeklyCases: 4, trend: 'up', 
-    trendData: [2, 1, 3, 2, 5, 4],
-    cases: [0, 2, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0] 
-  },
-  { 
-    id: 2, name: 'ไข้เลือดออก', ytdCases: 3, ytdDeaths: 0, weeklyCases: 0, trend: 'down', 
-    trendData: [1, 2, 0, 1, 0, 0],
-    cases: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] 
-  },
-  { 
-    id: 3, name: 'โรคสครับไทฟัส', ytdCases: 15, ytdDeaths: 0, weeklyCases: 2, trend: 'up', 
-    trendData: [0, 1, 0, 1, 2, 2],
-    cases: [1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] 
-  },
-  { 
-    id: 4, name: 'โรคเลปโตสไปโรซิส', ytdCases: 8, ytdDeaths: 0, weeklyCases: 1, trend: 'down', 
-    trendData: [2, 0, 1, 0, 2, 1],
-    cases: [0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] 
-  },
-  { 
-    id: 5, name: 'โรคไข้มาลาเรีย', ytdCases: 2, ytdDeaths: 0, weeklyCases: 0, trend: 'down', 
-    trendData: [0, 0, 1, 0, 0, 0],
-    cases: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] 
-  }
-];
-
-const mockEradicationData = [
-  { 
-    id: 1, name: 'อัมพาตกล้ามเนื้ออ่อนปวกเปียก', ytdCases: 6, ytdDeaths: 0, weeklyCases: 0, trend: 'down', 
-    trendData: [0, 1, 0, 0, 0, 0],
-    cases: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] 
-  },
-  { 
-    id: 2, name: 'ไข้หัดที่มีโรคแทรกซ้อน', ytdCases: 3, ytdDeaths: 0, weeklyCases: 0, trend: 'down', 
-    trendData: [0, 0, 0, 1, 0, 0],
-    cases: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] 
-  }
-];
-
-// โครงสร้าง CSS ตัวแปรสำหรับแต่ละโทนสี
-const themeVariables = {
-  navy: `
-    --bg-base: #0B1120;
-    --bg-card: rgba(30, 41, 59, 0.75);
-    --bg-header: rgba(15, 23, 42, 0.85);
-    --bg-table-header: #0f172a;
-    --border-table-accent: #3b82f6;
-    --border-color: rgba(51, 65, 85, 0.8);
-    --text-main: #ffffff;
-    --text-muted: #94a3b8;
-    --hover-row: rgba(51, 65, 85, 0.5);
-    --glow-1: radial-gradient(circle, rgba(37,99,235,0.25) 0%, rgba(11,17,32,0) 70%);
-    --glow-2: radial-gradient(circle, rgba(225,29,72,0.25) 0%, rgba(11,17,32,0) 70%);
-    --glow-3: radial-gradient(circle, rgba(168,85,247,0.2) 0%, rgba(11,17,32,0) 70%);
-    --badge-bg: rgba(15, 23, 42, 0.8);
-    --text-highlight-blue: #bfdbfe;
-    --text-highlight-rose: #fecdd3;
-    --text-highlight-emerald: #d1fae5;
-  `,
-  light: `
-    --bg-base: #f8fafc;
-    --bg-card: rgba(255, 255, 255, 0.85);
-    --bg-header: rgba(255, 255, 255, 0.95);
-    --bg-table-header: #f1f5f9;
-    --border-table-accent: #0284c7;
-    --border-color: rgba(226, 232, 240, 0.9);
-    --text-main: #0f172a;
-    --text-muted: #64748b;
-    --hover-row: rgba(241, 245, 249, 0.8);
-    --glow-1: radial-gradient(circle, rgba(56,189,248,0.25) 0%, rgba(248,250,252,0) 70%);
-    --glow-2: radial-gradient(circle, rgba(52,211,153,0.25) 0%, rgba(248,250,252,0) 70%);
-    --glow-3: radial-gradient(circle, rgba(251,191,36,0.15) 0%, rgba(248,250,252,0) 70%);
-    --badge-bg: #f1f5f9;
-    --text-highlight-blue: #0284c7;
-    --text-highlight-rose: #e11d48;
-    --text-highlight-emerald: #059669;
-  `,
-  emerald: `
-    --bg-base: #022c22;
-    --bg-card: rgba(6, 78, 59, 0.75);
-    --bg-header: rgba(6, 78, 59, 0.85);
-    --bg-table-header: #064e3b;
-    --border-table-accent: #10b981;
-    --border-color: rgba(4, 120, 87, 0.7);
-    --text-main: #ecfdf5;
-    --text-muted: #a7f3d0;
-    --hover-row: rgba(6, 95, 70, 0.6);
-    --glow-1: radial-gradient(circle, rgba(16,185,129,0.3) 0%, rgba(2,44,34,0) 70%);
-    --glow-2: radial-gradient(circle, rgba(5,150,105,0.3) 0%, rgba(2,44,34,0) 70%);
-    --glow-3: radial-gradient(circle, rgba(234,179,8,0.15) 0%, rgba(2,44,34,0) 70%);
-    --badge-bg: rgba(6, 78, 59, 0.8);
-    --text-highlight-blue: #6ee7b7;
-    --text-highlight-rose: #fca5a5;
-    --text-highlight-emerald: #86efac;
-  `,
-  purple: `
-    --bg-base: #1e1b4b;
-    --bg-card: rgba(46, 20, 55, 0.75);
-    --bg-header: rgba(59, 7, 100, 0.85);
-    --bg-table-header: #3b0764;
-    --border-table-accent: #a855f7;
-    --border-color: rgba(76, 29, 149, 0.7);
-    --text-main: #f5f3ff;
-    --text-muted: #c4b5fd;
-    --hover-row: rgba(76, 29, 149, 0.6);
-    --glow-1: radial-gradient(circle, rgba(168,85,247,0.35) 0%, rgba(30,27,75,0) 70%);
-    --glow-2: radial-gradient(circle, rgba(236,72,153,0.3) 0%, rgba(30,27,75,0) 70%);
-    --glow-3: radial-gradient(circle, rgba(59,130,246,0.2) 0%, rgba(30,27,75,0) 70%);
-    --badge-bg: rgba(46, 16, 101, 0.8);
-    --text-highlight-blue: #d8b4fe;
-    --text-highlight-rose: #f9a8d4;
-    --text-highlight-emerald: #a7f3d0;
-  `
-};
-
-// ฟังก์ชันจัดอันดับอำเภอที่ผู้ป่วยเยอะสุด 3 อันดับแรก เพื่อใช้ไล่ระดับสี
-const getTopRankings = (cases) => {
-  const uniqueTopValues = [...new Set(cases)]
-    .filter(val => val > 0)
-    .sort((a, b) => b - a)
-    .slice(0, 3);
-  
-  const rankings = {};
-  cases.forEach((val, idx) => {
-    if (val > 0) {
-      const rank = uniqueTopValues.indexOf(val);
-      if (rank !== -1) {
-        rankings[idx] = rank + 1; // 1 = สูงสุด, 2 = รองลงมา, 3 = อันดับสาม
-      }
-    }
-  });
-  return rankings;
-};
-
-// Component วาดกราฟ Sparkline
-const Sparkline = ({ data, color }) => {
-  if (!data || data.length === 0) return null;
-  
-  const max = Math.max(...data);
-  const min = Math.min(...data);
-  const range = max - min || 1;
-  
-  const points = data.map((d, i) => {
-    const x = (i / (data.length - 1)) * 100;
-    const y = 100 - ((d - min) / range) * 100;
-    return `${x},${y}`;
-  }).join(' ');
-
-  const lastY = 100 - ((data[data.length - 1] - min) / range) * 100;
-
-  return (
-    <svg viewBox="-5 -10 110 120" className="w-full h-full overflow-visible drop-shadow-sm">
-      <polyline 
-        fill="none" 
-        stroke={color} 
-        strokeWidth="12" 
-        strokeOpacity="0.2"
-        points={points} 
-        strokeLinecap="round" 
-        strokeLinejoin="round" 
-        className="transform translate-y-2"
-      />
-      <polyline 
-        fill="none" 
-        stroke={color} 
-        strokeWidth="8" 
-        points={points} 
-        strokeLinecap="round" 
-        strokeLinejoin="round" 
-      />
-      <circle cx="100" cy={lastY} r="10" fill={color} stroke="var(--bg-card)" strokeWidth="4" />
-    </svg>
-  );
-};
-
-// Component ตารางที่เรียกใช้ซ้ำได้
-const DiseaseTable = ({ title, data, titleColorClass = "t-text" }) => {
-  if (!data || data.length === 0) return null;
-  
-  return (
-    <div className="t-card border t-border rounded-2xl shadow-2xl overflow-hidden flex flex-col w-full mb-10">
-      <table className="text-left border-collapse w-full">
-        <thead className="relative z-20">
-          <tr className="t-table-header text-[15px] tracking-wider shadow-lg">
-            
-            <th className={`p-6 font-black border-r t-border min-w-[320px] ${titleColorClass} text-[20px] align-bottom`}>
-              {title}
-            </th>
-            
-            <th className="p-5 font-bold border-r t-border text-center min-w-[100px] t-text-blue align-bottom">
-              สะสม<br/><span className="text-[12px] opacity-80 font-medium">YTD</span>
-            </th>
-
-            <th className="p-5 font-bold border-r t-border text-center min-w-[90px] t-text-rose align-bottom">
-              ตาย<br/><span className="text-[12px] opacity-80 font-medium">YTD</span>
-            </th>
-
-            <th className="p-5 font-bold border-r t-border text-center t-text-emerald min-w-[200px] align-bottom">
-              สัปดาห์นี้<br/><span className="text-[12px] opacity-80 font-medium">This Week Trend</span>
-            </th>
-            
-            {districts.map(dist => (
-              <th key={dist} className="px-1 py-4 font-bold border-r t-border text-center w-[72px] min-w-[72px] max-w-[72px] t-text align-bottom text-[13px] leading-tight" style={{ wordBreak: 'normal', overflowWrap: 'normal' }}>
-                {dist}
-              </th>
-            ))}
-          </tr>
-        </thead>
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard ผลการจัดส่งรายงานเฝ้าระวังโรค D506</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Prompt', sans-serif; background-color: #f8fafc; color: #1e293b; font-size: 14px; }
+        .glass-card { background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,0.3); }
         
-        <tbody>
-          {data.map((row) => {
-            const rankings = getTopRankings(row.cases);
-            const sparklineColor = row.trend === 'up' ? '#f43f5e' : row.trend === 'down' ? '#10b981' : '#f59e0b';
+        .badge-3d {
+            box-shadow: 0 4px 0 #047857, 0 8px 15px rgba(0,0,0,0.1);
+            border-top: 1px solid rgba(255,255,255,0.3);
+        }
 
-            return (
-              <tr key={row.id} className="t-hover transition-colors group">
-                
-                <td className="p-5 font-medium t-text border-r t-border whitespace-nowrap t-card">
-                  <div className="flex items-center space-x-4">
-                    <span className="flex items-center justify-center w-7 h-7 rounded-full t-badge t-text-muted text-sm font-bold border t-border">{row.id}</span>
-                    <span className="text-[18px]">{row.name}</span>
-                  </div>
-                </td>
-                
-                <td className="p-5 text-center t-text-muted border-r t-border font-medium text-[17px]">
-                  {Number(row.ytdCases).toLocaleString()}
-                </td>
+        .card-3d { transition: all 0.2s ease; cursor: default; }
+        .card-3d:hover { transform: translateY(-3px); }
+        
+        .c-blue { background: linear-gradient(135deg, #3b82f6, #1d4ed8); box-shadow: 0 6px 0 #1e40af, 0 12px 20px rgba(30,64,175,0.15); }
+        .c-emerald { background: linear-gradient(135deg, #10b981, #047857); box-shadow: 0 6px 0 #065f46, 0 12px 20px rgba(6,95,70,0.15); }
+        .c-cyan { background: linear-gradient(135deg, #06b6d4, #0891b2); box-shadow: 0 6px 0 #0e7490, 0 12px 20px rgba(14,116,144,0.15); }
+        .c-rose { background: linear-gradient(135deg, #f43f5e, #be123c); box-shadow: 0 6px 0 #9f1239, 0 12px 20px rgba(159,18,57,0.15); }
 
-                <td className="p-5 text-center border-r t-border t-bg-subtle-rose">
-                  <span className={`font-bold text-[17px] ${row.ytdDeaths > 0 ? 'text-rose-500 bg-rose-500/10 border border-rose-500/20 px-3 py-1.5 rounded-md shadow-sm' : 't-text-muted opacity-60'}`}>
-                    {row.ytdDeaths > 0 ? row.ytdDeaths : '-'}
-                  </span>
-                </td>
+        .v-divider { border-right: 3px solid #e2e8f0; }
+        th { white-space: nowrap; font-weight: 800; text-align: center !important; }
+        
+        .row-sent-ontime { background-color: #f0fdf4; }
+        .row-sent-zero { background-color: #eff6ff; }
+        .row-sent-late { background-color: #fffbeb; }
+        .row-missing { background-color: #fff1f2; }
+        
+        /* Fixed Column Widths for Alignment */
+        .col-stats-total { width: 140px; }
+        .col-stats-item { width: 100px; }
+    </style>
+</head>
+<body class="min-h-screen pb-8">
 
-                <td className="p-4 border-r t-border t-bg-subtle-blue">
-                  <div className="flex items-center justify-start space-x-5 pl-4">
-                    <span className={`font-black text-[24px] px-4 py-1.5 rounded-xl shadow-inner border-2 min-w-[4rem] text-center
-                      ${row.trend === 'up' 
-                        ? 'bg-rose-500/10 border-rose-500/60 text-rose-500 shadow-[0_0_15px_rgba(244,63,94,0.2)]' 
-                        : row.trend === 'down'
-                        ? 'bg-emerald-500/10 border-emerald-500/60 text-emerald-500'
-                        : 'bg-amber-500/10 border-amber-500/60 text-amber-500'
-                      }
-                    `}>
-                      {Number(row.weeklyCases).toLocaleString()}
-                    </span>
-                    <div className="w-20 h-12">
-                      <Sparkline data={row.trendData} color={sparklineColor} />
+    <div class="max-w-[1500px] mx-auto p-4 md:p-6">
+        
+        <!-- Header Section -->
+        <header class="bg-white p-5 rounded-3xl shadow-lg mb-6 border border-slate-100 flex flex-col lg:flex-row justify-between items-center gap-4">
+            <div class="flex items-center gap-6">
+                <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/e/e0/Ministry_of_Public_Health_Logo_%28Thailand%29.svg/120px-Ministry_of_Public_Health_Logo_%28Thailand%29.svg.png" 
+                     alt="MOPH" class="w-16 h-16 object-contain">
+                <div>
+                    <h1 class="text-xl md:text-2xl font-black bg-clip-text text-transparent bg-gradient-to-r from-emerald-700 to-teal-500 tracking-tight">
+                        Dashboard ผลการจัดส่งรายงานเฝ้าระวังโรค D506
+                    </h1>
+                    <div class="flex items-center gap-3 mt-0.5">
+                        <h2 class="text-lg font-bold text-slate-600">จังหวัดอุดรธานี</h2>
+                        <span class="text-slate-300">|</span>
+                        <p id="currentWeekRange" class="text-slate-400 font-bold text-sm flex items-center gap-2">
+                            <span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
+                            รอการอัปโหลดไฟล์
+                        </p>
                     </div>
-                  </div>
-                </td>
-                
-                {row.cases.map((caseCount, index) => {
-                  const rank = rankings[index];
-                  let badgeContent = <span className="t-text-muted opacity-30 text-[14px]">-</span>;
-                  
-                  // ดีไซน์ Top 3 แบบ Badge ลอยตัว โดดเด่น
-                  if (rank === 1) {
-                    badgeContent = <div className="mx-auto w-9 h-9 flex items-center justify-center bg-gradient-to-tr from-rose-600 to-rose-400 text-white rounded-full shadow-[0_0_12px_rgba(225,29,72,0.8)] border border-rose-200 font-black text-[17px] transform hover:scale-110 transition-transform">{caseCount}</div>;
-                  } else if (rank === 2) {
-                    badgeContent = <div className="mx-auto w-8 h-8 flex items-center justify-center bg-gradient-to-tr from-orange-500 to-orange-400 text-white rounded-full shadow-[0_0_8px_rgba(249,115,22,0.6)] border border-orange-200 font-bold text-[16px]">{caseCount}</div>;
-                  } else if (rank === 3) {
-                    badgeContent = <div className="mx-auto w-7 h-7 flex items-center justify-center bg-gradient-to-tr from-amber-400 to-amber-300 text-amber-950 rounded-lg shadow-[0_0_6px_rgba(251,191,36,0.5)] border border-amber-100 font-bold text-[14px]">{caseCount}</div>;
-                  } else if (caseCount > 0) {
-                    badgeContent = <span className="t-text font-medium text-[16px]">{caseCount}</span>;
-                  }
-
-                  return (
-                    <td 
-                      key={index} 
-                      className="p-2 text-center border-r t-border w-[72px] min-w-[72px] max-w-[72px] last:border-r-0 align-middle"
-                    >
-                      {badgeContent}
-                    </td>
-                  );
-                })}
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
-    </div>
-  );
-};
-
-export default function App() {
-  const [theme] = useState('navy'); // State ควบคุมโทนสี (ล็อกไว้ที่ navy)
-  const [isLoading, setIsLoading] = useState(true);
-  const [apiError, setApiError] = useState(null);
-
-  // State หลักสำหรับเก็บข้อมูล Dashboard
-  const [dashboardData, setDashboardData] = useState({
-    settings: {
-      weekNumber: '12',
-      publishDate: '28 เมษายน 2569',
-      totalYtdCases: 2202,
-      totalYtdDeaths: 2,
-      totalWeeklyCases: 660,
-      totalWeeklyDeaths: 0,
-      topReportDistricts: 'เพ็ญ, หนองหาน, วังสามหมอ',
-      surveillanceEvents: 12
-    },
-    importantDiseases: mockImportantData,
-    specialDiseases: mockSpecialData,
-    eradicationDiseases: mockEradicationData,
-    notes: [
-      { type: 'danger', message: 'พบแนวโน้มการระบาดของ <strong class="t-text">โรคอุจจาระร่วงเฉียบพลัน และ อาหารเป็นพิษ</strong> สูงขึ้นอย่างมีนัยสำคัญใน <strong class="text-rose-500">อ.เมือง และ อ.กุมภวาปี</strong>' },
-      { type: 'warning', message: 'โปรดพิจารณาสั่งการทีมสอบสวนโรค (JIT) ลงพื้นที่ตรวจสอบแหล่งน้ำและสุขาภิบาลอาหารในสถานศึกษา' }
-    ]
-  });
-
-  const [localWeek, setLocalWeek] = useState(dashboardData.settings.weekNumber);
-
-  // ดึงข้อมูลจาก Google Sheets API เมื่อเปิดหน้าเว็บ
-  useEffect(() => {
-    const fetchApiData = async () => {
-      try {
-        const url = 'https://script.google.com/macros/s/AKfycbzmio7ZVYyxVrQlb1-1rgxAmSifHNV05pUJ4z3XDfLmk6X0ydSaU_0JBdZ7eOKe8VXE/exec';
-        // เพิ่ม { redirect: 'follow' } เพื่อรองรับการเปลี่ยนเส้นทางของเซิร์ฟเวอร์ Google
-        const response = await fetch(url, { 
-          method: 'GET',
-          redirect: 'follow',
-          headers: {
-            'Accept': 'application/json'
-          }
-        });
-        
-        if (!response.ok) {
-          throw new Error("Network response was not ok");
-        }
-        
-        const result = await response.json();
-        
-        if (result.status === 'success' && result.data) {
-          const newData = { ...dashboardData };
-          
-          if (result.data.settings && Object.keys(result.data.settings).length > 0) {
-             newData.settings = { ...newData.settings, ...result.data.settings };
-          }
-          if (result.data.importantDiseases && result.data.importantDiseases.length > 0) {
-             newData.importantDiseases = result.data.importantDiseases;
-          }
-          if (result.data.specialDiseases && result.data.specialDiseases.length > 0) {
-             newData.specialDiseases = result.data.specialDiseases;
-          }
-          if (result.data.eradicationDiseases && result.data.eradicationDiseases.length > 0) {
-             newData.eradicationDiseases = result.data.eradicationDiseases;
-          }
-          if (result.data.notes && result.data.notes.length > 0) {
-             newData.notes = result.data.notes;
-          }
-          
-          setDashboardData(newData);
-          setLocalWeek(newData.settings.weekNumber);
-        } else {
-           setApiError("เชื่อมต่อสำเร็จ แต่ไม่พบข้อมูลในตาราง");
-           setTimeout(() => setApiError(null), 5000); // ซ่อนอัตโนมัติ
-        }
-      } catch (error) {
-        console.error("API Fetch Error:", error);
-        setApiError("ถูกบล็อกการเชื่อมต่อ (กำลังแสดงข้อมูลแบบ Offline)");
-        setTimeout(() => setApiError(null), 5000); // ซ่อนกล่องแจ้งเตือนอัตโนมัติใน 5 วินาที
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchApiData();
-  }, []);
-
-  return (
-    <div className="flex flex-col t-text min-h-screen relative w-full pb-16 t-bg transition-colors duration-500" style={{ fontFamily: "'Prompt', sans-serif" }}>
-      
-      {/* Loading Overlay */}
-      {isLoading && (
-        <div className="fixed inset-0 z-[200] bg-[#0B1120]/80 backdrop-blur-sm flex flex-col items-center justify-center text-white">
-          <div className="w-16 h-16 border-4 border-blue-500/20 border-t-blue-500 rounded-full animate-spin mb-6"></div>
-          <h2 className="text-2xl font-bold mb-2 tracking-wide">กำลังเชื่อมต่อฐานข้อมูล...</h2>
-          <p className="text-slate-400">Google Sheets API</p>
-        </div>
-      )}
-
-      {/* Error Toast */}
-      {apiError && !isLoading && (
-        <div className="fixed top-6 left-1/2 transform -translate-x-1/2 z-[100] bg-rose-500/90 text-white px-6 py-3 rounded-full shadow-lg backdrop-blur-md flex items-center space-x-2 animate-bounce">
-          <AlertTriangle className="w-5 h-5" />
-          <span>{apiError}</span>
-        </div>
-      )}
-
-      {/* Dynamic CSS Variables */}
-      <style>
-        {`
-          /* แก้ไขการโหลด Font ให้เป็นแบบมาตรฐานเพื่อป้องกัน Error 400 จาก Google Fonts */
-          @import url('https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700;900&display=swap');
-          
-          :root {
-            ${themeVariables[theme]}
-          }
-
-          body, html {
-            background-color: var(--bg-base) !important;
-            margin: 0;
-            padding: 0;
-            overflow-x: auto;
-          }
-          
-          .t-bg { background-color: var(--bg-base); }
-          .t-card { 
-            background-color: var(--bg-card); 
-            backdrop-filter: blur(16px); 
-            -webkit-backdrop-filter: blur(16px); 
-          }
-          .t-header { 
-            background-color: var(--bg-header); 
-            backdrop-filter: blur(20px); 
-            -webkit-backdrop-filter: blur(20px); 
-          }
-          .t-border { border-color: var(--border-color); }
-          .t-text { color: var(--text-main); }
-          .t-text-muted { color: var(--text-muted); }
-          .t-hover:hover { background-color: var(--hover-row); }
-          .t-glow-1 { background: var(--glow-1); }
-          .t-glow-2 { background: var(--glow-2); }
-          .t-glow-3 { background: var(--glow-3); }
-          .t-badge { background-color: var(--badge-bg); }
-          
-          .t-table-header th {
-            background-color: var(--bg-table-header) !important;
-            border-bottom: 3px solid var(--border-table-accent) !important;
-          }
-          
-          .t-text-blue { color: var(--text-highlight-blue); }
-          .t-text-rose { color: var(--text-highlight-rose); }
-          .t-text-emerald { color: var(--text-highlight-emerald); }
-          
-          .t-bg-subtle-rose { background-color: rgba(225,29,72,0.03); }
-          .t-bg-subtle-blue { background-color: rgba(37,99,235,0.03); }
-
-          tbody tr { border-bottom: 1px solid var(--border-color); }
-          tbody tr:last-child { border-bottom: none; }
-          
-          input[type="number"]::-webkit-inner-spin-button, 
-          input[type="number"]::-webkit-outer-spin-button { 
-            -webkit-appearance: none; margin: 0; 
-          }
-        `}
-      </style>
-
-      {/* Ambient Background Effects - ล้ำลึกและมีมิติมากขึ้น */}
-      <div className="fixed top-[-15%] left-[-5%] w-[60vw] h-[60vw] rounded-full pointer-events-none z-0 t-glow-1 transition-all duration-1000 mix-blend-screen opacity-80"></div>
-      <div className="fixed bottom-[-15%] right-[-5%] w-[60vw] h-[60vw] rounded-full pointer-events-none z-0 t-glow-2 transition-all duration-1000 mix-blend-screen opacity-80"></div>
-      <div className="fixed top-[25%] left-[35%] w-[40vw] h-[40vw] rounded-full pointer-events-none z-0 t-glow-3 transition-all duration-1000 mix-blend-screen opacity-60"></div>
-      
-      {/* Grid Pattern หรูหราขึ้น */}
-      <div className="fixed inset-0 z-0 pointer-events-none opacity-[0.04]" style={{ backgroundImage: 'linear-gradient(var(--text-main) 1px, transparent 1px), linear-gradient(90deg, var(--text-main) 1px, transparent 1px)', backgroundSize: '60px 60px' }}></div>
-      <div className="fixed inset-0 z-0 pointer-events-none" style={{ background: 'radial-gradient(circle at center, transparent 0%, var(--bg-base) 100%)' }}></div>
-
-      {/* Main Layout Container */}
-      <div className="relative z-10 p-8 w-max min-w-full mx-auto flex flex-col space-y-8">
-        
-        {/* Header */}
-        <header className="flex justify-between items-center p-8 t-header border t-border shadow-[0_10px_30px_rgba(0,0,0,0.2)] rounded-3xl w-full">
-          <div className="flex items-center space-x-6 pl-2">
-            <div className="bg-white p-2.5 rounded-full shadow-[0_0_30px_rgba(59,130,246,0.6)] flex items-center justify-center relative w-[85px] h-[85px] shrink-0 border-4 border-blue-50/90">
-              <img 
-                src="https://upload.wikimedia.org/wikipedia/commons/thumb/1/15/Seal_of_the_Ministry_of_Public_Health_of_Thailand.svg/240px-Seal_of_the_Ministry_of_Public_Health_of_Thailand.svg.png" 
-                alt="Ministry of Public Health Logo" 
-                className="w-[85%] h-[85%] object-contain"
-                onError={(e) => { 
-                  e.target.onerror = null; 
-                  e.target.src = "https://via.placeholder.com/80/ffffff/059669?text=MOPH"; 
-                }}
-              />
+                </div>
             </div>
-            
-            <div>
-              <h1 className="text-4xl font-black t-text flex items-center space-x-3 drop-shadow-lg tracking-wide">
-                <span>สถานการณ์โรคติดต่อจังหวัดอุดรธานี ปี 2569</span>
-              </h1>
-              <p className="t-text-muted mt-2 text-xl font-bold tracking-wide">สรุปผลสัปดาห์ระบาดวิทยา ที่ 1 - {localWeek}</p>
+
+            <div class="flex items-center gap-4">
+                <div id="dropZone" class="group bg-slate-50 hover:bg-emerald-50 px-6 py-3 rounded-2xl border-2 border-dashed border-slate-300 hover:border-emerald-500 cursor-pointer transition-all flex items-center gap-3">
+                    <i data-lucide="upload-cloud" class="w-6 h-6 text-emerald-500"></i>
+                    <div>
+                        <p class="font-black text-slate-700 text-sm">อัปโหลดไฟล์</p>
+                        <p class="text-[10px] text-slate-400 font-bold uppercase">CSV Only</p>
+                    </div>
+                    <input type="file" id="csvInput" accept=".csv" class="hidden">
+                </div>
+
+                <div id="weekBadgeContainer" class="hidden relative">
+                    <div class="w-20 h-20 bg-gradient-to-br from-emerald-400 to-emerald-600 rounded-2xl badge-3d flex flex-col items-center justify-center text-white">
+                        <span class="text-[8px] font-black uppercase opacity-80">W</span>
+                        <span id="displayWeek" class="text-3xl font-black leading-none my-0.5">--</span>
+                        <span class="text-[8px] font-bold bg-emerald-800/20 px-2 py-0.5 rounded-full">2569</span>
+                    </div>
+                </div>
             </div>
-          </div>
-          
-          <div className="flex items-center pr-4">
-            <div className="flex flex-col items-end">
-              <span className="t-text-muted text-base font-black uppercase tracking-widest mb-1">สัปดาห์ที่ / Week</span>
-              <input 
-                type="number" 
-                value={localWeek}
-                onChange={(e) => setLocalWeek(e.target.value)}
-                className="w-32 bg-transparent text-right text-7xl font-black text-transparent bg-clip-text bg-gradient-to-br from-blue-400 to-indigo-400 focus:outline-none transition-all py-1 drop-shadow-2xl cursor-text"
-                title="คลิกเพื่อแก้ไขเลขสัปดาห์"
-              />
-            </div>
-          </div>
         </header>
 
-        {/* KPI Cards Row */}
-        <div className="grid grid-cols-6 gap-6 w-full">
-          
-          <div className="t-card border t-border rounded-3xl p-7 shadow-2xl relative overflow-hidden group hover:-translate-y-1 transition-transform">
-            <div className="flex justify-between items-start relative z-10">
-              <div>
-                <p className="t-text-muted text-sm font-bold mb-2 uppercase tracking-wide">จำนวนข้อมูลรายงาน D506 ในปี</p>
-                <h2 className="text-4xl font-black t-text tracking-tight drop-shadow-sm">{Number(dashboardData.settings.totalYtdCases).toLocaleString()}</h2>
-              </div>
-              <div className="bg-gradient-to-br from-blue-500/20 to-blue-600/5 p-3.5 rounded-2xl border border-blue-500/30 shadow-[0_0_15px_rgba(59,130,246,0.3)] group-hover:scale-110 transition-transform">
-                <FileSpreadsheet className="w-7 h-7 text-blue-400 drop-shadow-[0_0_8px_rgba(59,130,246,0.8)]" strokeWidth={2.5} />
-              </div>
+        <main id="dashboardArea" class="hidden space-y-6">
+            
+            <!-- Row 1: 4 Status Cards -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div class="card-3d c-blue rounded-3xl p-5 text-white relative overflow-hidden group">
+                    <i data-lucide="send" class="absolute -right-4 -bottom-4 w-20 h-20 opacity-10"></i>
+                    <div class="relative z-10">
+                        <span class="text-[10px] font-black uppercase tracking-widest opacity-80">ผลการส่งในสัปดาห์</span>
+                        <h3 id="statRate" class="text-3xl font-black mb-1 tracking-tighter">0%</h3>
+                        <p id="statCount" class="text-xs font-bold bg-blue-900/20 inline-block px-2 py-0.5 rounded-lg">0/0 แห่ง</p>
+                    </div>
+                </div>
+                <div class="card-3d c-emerald rounded-3xl p-5 text-white relative overflow-hidden group">
+                    <i data-lucide="check-circle" class="absolute -right-4 -bottom-4 w-20 h-20 opacity-10"></i>
+                    <div class="relative z-10">
+                        <span class="text-[10px] font-black uppercase tracking-widest opacity-80">ส่งข้อมูลทันเวลา</span>
+                        <h3 id="statOnTime" class="text-3xl font-black mb-1 tracking-tighter">0%</h3>
+                        <span class="text-[10px] font-bold uppercase opacity-80">W-Update</span>
+                    </div>
+                </div>
+                <div class="card-3d c-cyan rounded-3xl p-5 text-white relative overflow-hidden group">
+                    <i data-lucide="file-text" class="absolute -right-4 -bottom-4 w-20 h-20 opacity-10"></i>
+                    <div class="relative z-10">
+                        <span class="text-[10px] font-black uppercase tracking-widest opacity-80">ส่ง Zero Report</span>
+                        <h3 id="statZero" class="text-3xl font-black mb-1 tracking-tighter">0</h3>
+                        <span class="text-[10px] font-bold opacity-80">สถานบริการไม่มีผู้ป่วย</span>
+                    </div>
+                </div>
+                <div class="card-3d c-rose rounded-3xl p-5 text-white relative overflow-hidden group">
+                    <i data-lucide="alert-circle" class="absolute -right-4 -bottom-4 w-20 h-20 opacity-10"></i>
+                    <div class="relative z-10">
+                        <span class="text-[10px] font-black uppercase tracking-widest opacity-80">ยังไม่ส่งข้อมูล</span>
+                        <h3 id="statMissing" class="text-3xl font-black mb-1 tracking-tighter">0</h3>
+                        <p class="text-[10px] font-black flex items-center gap-1 uppercase"><i data-lucide="flame" class="w-3 h-3"></i> Tracking Now</p>
+                    </div>
+                </div>
             </div>
-            <div className="mt-6 flex items-center text-sm t-badge inline-flex px-3.5 py-2 rounded-xl border t-border relative z-10 shadow-inner">
-              <TrendingUp className="w-4 h-4 text-emerald-400 mr-2" strokeWidth={3} />
-              <span className="text-emerald-400 font-bold">+162</span>
-              <span className="t-text-muted ml-2 font-medium">สัปดาห์ก่อน</span>
-            </div>
-          </div>
 
-          <div className="t-card border t-border rounded-3xl p-7 shadow-2xl relative overflow-hidden group hover:-translate-y-1 transition-transform">
-            <div className="flex justify-between items-start relative z-10">
-              <div>
-                <p className="t-text-muted text-sm font-bold mb-2 uppercase tracking-wide">จำนวนผู้เสียชีวิต D506 ในปี</p>
-                <h2 className="text-4xl font-black text-rose-500 tracking-tight drop-shadow-sm">{Number(dashboardData.settings.totalYtdDeaths).toLocaleString()}</h2>
-              </div>
-              <div className="bg-gradient-to-br from-rose-500/20 to-rose-600/5 p-3.5 rounded-2xl border border-rose-500/30 shadow-[0_0_15px_rgba(225,29,72,0.3)] group-hover:scale-110 transition-transform">
-                <AlertTriangle className="w-7 h-7 text-rose-400 drop-shadow-[0_0_8px_rgba(225,29,72,0.8)]" strokeWidth={2.5} />
-              </div>
-            </div>
-            <div className="mt-6 flex items-center text-sm t-badge inline-flex px-3.5 py-2 rounded-xl border t-border relative z-10 shadow-inner">
-              <Minus className="w-4 h-4 t-text-muted mr-2" strokeWidth={3} />
-              <span className="t-text-muted font-bold">0</span>
-              <span className="t-text-muted ml-2 font-medium">สัปดาห์นี้</span>
-            </div>
-          </div>
+            <!-- Main Tables Section -->
+            <div class="bg-white rounded-3xl shadow-lg border border-slate-100 p-6">
+                <div class="flex items-center gap-3 mb-6">
+                    <div class="w-10 h-10 bg-emerald-100 rounded-xl flex items-center justify-center text-emerald-600">
+                        <i data-lucide="list-checks" class="w-6 h-6"></i>
+                    </div>
+                    <h3 class="text-lg font-black text-slate-800">สรุปผลการรายงานประจำสัปดาห์</h3>
+                </div>
 
-          <div className="t-card border t-border rounded-3xl p-7 shadow-2xl relative overflow-hidden group hover:-translate-y-1 transition-transform">
-            <div className="flex justify-between items-start relative z-10">
-              <div>
-                <p className="t-text-muted text-sm font-bold mb-2 uppercase tracking-wide">จำนวนรายงาน D506 ในสัปดาห์</p>
-                <h2 className="text-4xl font-black text-indigo-400 tracking-tight drop-shadow-sm">{Number(dashboardData.settings.totalWeeklyCases).toLocaleString()}</h2>
-              </div>
-              <div className="bg-gradient-to-br from-indigo-500/20 to-indigo-600/5 p-3.5 rounded-2xl border border-indigo-500/30 shadow-[0_0_15px_rgba(99,102,241,0.3)] group-hover:scale-110 transition-transform">
-                <Calendar className="w-7 h-7 text-indigo-400 drop-shadow-[0_0_8px_rgba(99,102,241,0.8)]" strokeWidth={2.5} />
-              </div>
-            </div>
-            <div className="mt-6 flex items-center text-sm t-badge inline-flex px-3.5 py-2 rounded-xl border t-border relative z-10 shadow-inner">
-              <TrendingDown className="w-4 h-4 text-emerald-400 mr-2" strokeWidth={3} />
-              <span className="text-emerald-400 font-bold">-5%</span>
-              <span className="t-text-muted ml-2 font-medium">เทียบสัปดาห์ก่อน</span>
-            </div>
-          </div>
+                <div class="space-y-10">
+                    <!-- Part 1: Mueang District -->
+                    <section>
+                        <div class="mb-4 flex items-center gap-4">
+                            <h4 class="bg-orange-500 text-white px-6 py-2 rounded-xl shadow-lg text-lg font-black border-2 border-white">อำเภอเมืองอุดรธานี</h4>
+                            <div id="mueangTypeSummary" class="flex flex-wrap gap-2"></div>
+                        </div>
+                        <div class="overflow-hidden border border-slate-200 rounded-2xl bg-slate-50">
+                            <table class="w-full text-left border-collapse min-w-[800px] text-sm table-fixed">
+                                <thead class="bg-slate-100 border-b border-slate-200 text-slate-500 uppercase tracking-widest text-[10px] font-black">
+                                    <tr>
+                                        <!-- รวมคอลัมน์เพื่อให้ความกว้างตรงกับตารางด้านล่าง -->
+                                        <th colspan="2" class="px-4 py-3 text-left v-divider">ชื่อสถานพยาบาล</th>
+                                        <th class="px-4 py-3 col-stats-total">รพ.สต./ศสม.</th>
+                                        <th class="px-4 py-3 col-stats-item text-emerald-700">ส่งแล้ว</th>
+                                        <th class="px-4 py-3 col-stats-item text-orange-600">ส่งช้า</th>
+                                        <th class="px-4 py-3 col-stats-item text-rose-600">ยังไม่ส่ง</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="mueangTableBody" class="font-bold"></tbody>
+                            </table>
+                        </div>
+                    </section>
 
-          <div className="t-card border t-border rounded-3xl p-7 shadow-2xl relative overflow-hidden group hover:-translate-y-1 transition-transform">
-            <div className="flex justify-between items-start relative z-10">
-              <div>
-                <p className="t-text-muted text-sm font-bold mb-2 uppercase tracking-wide">จำนวนผู้เสียชีวิต D506 ในสัปดาห์</p>
-                <h2 className="text-4xl font-black text-rose-400 tracking-tight drop-shadow-sm">{Number(dashboardData.settings.totalWeeklyDeaths).toLocaleString()}</h2>
-              </div>
-              <div className="bg-gradient-to-br from-rose-500/20 to-rose-600/5 p-3.5 rounded-2xl border border-rose-500/30 shadow-[0_0_15px_rgba(225,29,72,0.3)] group-hover:scale-110 transition-transform">
-                <Activity className="w-7 h-7 text-rose-400 drop-shadow-[0_0_8px_rgba(225,29,72,0.8)]" strokeWidth={2.5} />
-              </div>
+                    <!-- Part 2: Other Districts -->
+                    <section>
+                        <div class="mb-4 border-l-4 border-emerald-500 pl-4 flex items-center gap-4">
+                            <h4 class="bg-emerald-700 text-white px-5 py-1.5 rounded-lg shadow-md text-base font-black">อำเภออื่นๆ</h4>
+                            <div id="otherTypeSummary" class="flex flex-wrap gap-2"></div>
+                        </div>
+                        <div class="overflow-hidden border border-slate-200 rounded-2xl bg-slate-50">
+                            <table class="w-full text-left border-collapse min-w-[900px] text-sm table-fixed">
+                                <thead class="bg-slate-100 border-b border-slate-200 text-slate-500 uppercase tracking-widest text-[10px] font-black">
+                                    <tr>
+                                        <th class="px-4 py-3 w-[160px] text-left">อำเภอ</th>
+                                        <th class="px-4 py-3 v-divider text-left">ชื่อสถานพยาบาล</th>
+                                        <th class="px-4 py-3 col-stats-total">รพ.สต./ศสม.</th>
+                                        <th class="px-4 py-3 col-stats-item text-emerald-700">ส่งแล้ว</th>
+                                        <th class="px-4 py-3 col-stats-item text-orange-600">ส่งช้า</th>
+                                        <th class="px-4 py-3 col-stats-item text-rose-600">ยังไม่ส่ง</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="otherTableBody" class="font-bold"></tbody>
+                            </table>
+                        </div>
+                    </section>
+                </div>
             </div>
-            <div className="mt-6 flex items-center text-sm t-badge inline-flex px-3.5 py-2 rounded-xl border t-border relative z-10 shadow-inner">
-              <Minus className="w-4 h-4 t-text-muted mr-2" strokeWidth={3} />
-              <span className="t-text-muted font-bold">0</span>
-              <span className="t-text-muted ml-2 font-medium">สัปดาห์ก่อน</span>
-            </div>
-          </div>
 
-          <div className="t-card border t-border rounded-3xl p-7 shadow-2xl relative overflow-hidden group hover:-translate-y-1 transition-transform">
-            <div className="flex justify-between items-start relative z-10">
-              <div>
-                <p className="t-text-muted text-sm font-bold mb-2 uppercase tracking-wide">อำเภอที่รายงานยอดเยี่ยมในสัปดาห์</p>
-                <h2 className="text-4xl font-black text-emerald-400 tracking-tight drop-shadow-sm">{dashboardData.settings.topReportDistricts.split(',').length} <span className="text-2xl t-text-muted font-medium">พื้นที่</span></h2>
-              </div>
-              <div className="bg-gradient-to-br from-emerald-500/20 to-emerald-600/5 p-3.5 rounded-2xl border border-emerald-500/30 shadow-[0_0_15px_rgba(16,185,129,0.3)] group-hover:scale-110 transition-transform">
-                <Award className="w-7 h-7 text-emerald-400 drop-shadow-[0_0_8px_rgba(16,185,129,0.8)]" strokeWidth={2.5} />
-              </div>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div class="bg-white p-6 rounded-3xl shadow-lg border border-rose-100">
+                    <div class="flex justify-between items-center mb-4">
+                        <div class="flex items-center gap-3">
+                            <i data-lucide="alert-triangle" class="w-6 h-6 text-rose-600"></i>
+                            <h3 class="text-base font-black text-rose-600 uppercase tracking-tight">จำนวนหน่วยบริการที่ไม่มีการส่งข้อมูล ติดต่อกัน 3 สัปดาห์</h3>
+                        </div>
+                        <span id="missingBadge" class="bg-rose-500 text-white px-3 py-1 rounded-full font-black text-[10px]">0 แห่ง</span>
+                    </div>
+                    <div id="missingListContainer"></div>
+                </div>
+                <div class="bg-white p-6 rounded-3xl shadow-lg border border-blue-100">
+                    <div class="flex items-center gap-3 mb-4">
+                        <i data-lucide="trending-up" class="w-6 h-6 text-blue-600"></i>
+                        <h3 class="text-base font-black text-slate-800">แนวโน้มผลงานรายสัปดาห์</h3>
+                    </div>
+                    <div class="h-[250px]"><canvas id="historyChart"></canvas></div>
+                </div>
             </div>
-            <div className="mt-6 flex items-center text-sm t-badge px-3.5 py-2 rounded-xl border t-border relative z-10 shadow-inner">
-              <span className="text-emerald-500 font-bold truncate">{dashboardData.settings.topReportDistricts}</span>
-            </div>
-          </div>
+        </main>
 
-          <div className="t-card border border-purple-500/30 rounded-3xl p-7 shadow-[0_0_25px_rgba(168,85,247,0.15)] relative overflow-hidden group hover:-translate-y-1 transition-transform">
-            <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-purple-500/10 to-transparent z-0"></div>
-            <div className="flex justify-between items-start relative z-10">
-              <div>
-                <p className="text-purple-400 font-black text-sm mb-2 uppercase tracking-wide">จำนวนเหตุการณ์รับแจ้งเฝ้าระวังในสัปดาห์</p>
-                <h2 className="text-4xl font-black t-text tracking-tight leading-none mt-2 drop-shadow-sm">{Number(dashboardData.settings.surveillanceEvents).toLocaleString()} <span className="text-xl text-purple-400 font-bold">เหตุการณ์</span></h2>
-              </div>
-              <div className="bg-gradient-to-br from-purple-500/20 to-purple-600/5 p-3.5 rounded-2xl border border-purple-500/40 shadow-[0_0_20px_rgba(168,85,247,0.4)] animate-pulse group-hover:scale-110 transition-transform">
-                <BellRing className="w-7 h-7 text-purple-300 drop-shadow-[0_0_10px_rgba(168,85,247,0.8)]" strokeWidth={2.5} />
-              </div>
-            </div>
-          </div>
-
+        <!-- Empty State -->
+        <div id="emptyState" class="mt-10 py-20 bg-white rounded-3xl shadow-xl border-4 border-dashed border-slate-100 flex flex-col items-center justify-center">
+            <i data-lucide="file-spreadsheet" class="w-16 h-16 text-emerald-500 animate-bounce mb-6"></i>
+            <h2 class="text-3xl font-black text-slate-800 mb-2">จังหวัดอุดรธานี</h2>
+            <p class="text-lg text-slate-400 font-bold">กรุณาอัปโหลดไฟล์รายงาน D506 เพื่อเริ่มวิเคราะห์</p>
         </div>
-
-        {/* เรียกใช้ Component ตารางทั้ง 3 ชุด */}
-        <DiseaseTable 
-          title="กลุ่มโรคติดต่อที่สำคัญ" 
-          data={dashboardData.importantDiseases} 
-          titleColorClass="t-text" 
-        />
-        
-        <DiseaseTable 
-          title="กลุ่มโรคเฝ้าระวังเป็นพิเศษ" 
-          data={dashboardData.specialDiseases} 
-          titleColorClass="text-rose-500" 
-        />
-        
-        <DiseaseTable 
-          title="กลุ่มโรคกำจัด / กวาดล้าง" 
-          data={dashboardData.eradicationDiseases} 
-          titleColorClass="text-amber-500" 
-        />
-
-        {/* Bottom Card - ข้อสั่งการ / ประเมินความเสี่ยง */}
-        <div className="w-full">
-          <div className="t-card border t-border rounded-2xl p-7 shadow-xl flex flex-col w-full">
-            <div className="flex items-center space-x-3 mb-5">
-              <ShieldAlert className="w-6 h-6 text-indigo-500" />
-              <h3 className="t-text font-bold text-xl">ข้อประเมินสถานการณ์ (Executive Notes)</h3>
-            </div>
-            <div className="t-badge p-5 rounded-xl border t-border flex-1 space-y-4">
-              {dashboardData.notes.map((note, index) => {
-                const dotColor = note.type === 'danger' ? 'bg-rose-500' : (note.type === 'warning' ? 'bg-amber-500' : 'bg-emerald-500');
-                return (
-                  <div key={index} className="flex items-start space-x-3">
-                    <div className={`w-2 h-2 mt-2 ${dotColor} rounded-full shrink-0 shadow-[0_0_8px_${dotColor}]`}></div>
-                    <p className="t-text-muted text-[16px] leading-relaxed" dangerouslySetInnerHTML={{ __html: note.message }}></p>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-
-        {/* Footer */}
-        <div className="w-full text-center mt-12 pt-6 border-t t-border">
-          <p className="t-text-muted text-sm font-medium tracking-wide">
-            จัดทำโดยกลุ่มงานควบคุมโรคติดต่อ สำนักงานสาธารณสุขจังหวัดอุดรธานี เผยแพร่ เมื่อวันที่ {dashboardData.settings.publishDate || '28 เมษายน 2569'}
-          </p>
-        </div>
-
-      </div>
     </div>
-  );
-}
+
+    <script>
+        lucide.createIcons();
+        let currentCharts = {};
+        const dropZone = document.getElementById('dropZone');
+        const csvInput = document.getElementById('csvInput');
+        const dashboardArea = document.getElementById('dashboardArea');
+        const emptyState = document.getElementById('emptyState');
+
+        dropZone.onclick = () => csvInput.click();
+        csvInput.onchange = (e) => handleFile(e.target.files[0]);
+
+        function handleFile(file) {
+            if (!file) return;
+            Papa.parse(file, {
+                header: true,
+                skipEmptyLines: true,
+                complete: (results) => {
+                    renderDashboard(results.data);
+                    dashboardArea.classList.remove('hidden');
+                    emptyState.classList.add('hidden');
+                    lucide.createIcons();
+                }
+            });
+        }
+
+        function renderDashboard(data) {
+            data.forEach(d => {
+                d.week = parseInt(d['สัปดาห์ระบาด']);
+                d.is_sent = d.kpi !== 'ไม่ส่ง';
+                const match = d['สถานพยาบาล']?.match(/\((.*?)\)/);
+                if(match) d['สถานพยาบาล'] = match[1];
+                else d['สถานพยาบาล'] = d['สถานพยาบาล']?.replace(/^[0-9]+\s*/, '') || 'ไม่ระบุ';
+            });
+
+            const maxWeek = Math.max(...data.map(d => d.week));
+            const latestData = data.filter(d => d.week === maxWeek);
+            const allWeeks = [...new Set(data.map(d => d.week))].sort((a,b) => a-b);
+
+            document.getElementById('dropZone').classList.add('hidden');
+            document.getElementById('weekBadgeContainer').classList.remove('hidden');
+            document.getElementById('displayWeek').innerText = maxWeek;
+            document.getElementById('currentWeekRange').innerHTML = `ประมวลผลสัปดาห์ที่ ${maxWeek} สำเร็จ`;
+
+            const getBadgeStyles = (type) => {
+                if (type.includes('ศูนย์') && !type.includes('บริการ')) return 'bg-purple-100 text-purple-700 border-purple-200';
+                if (type.includes('ทั่วไป')) return 'bg-indigo-100 text-indigo-700 border-indigo-200';
+                if (type.includes('ชุมชน')) return 'bg-teal-100 text-teal-700 border-teal-200';
+                if (type.includes('เอกชน')) return 'bg-amber-100 text-amber-700 border-amber-200';
+                if (type.includes('รพ.สต.') || type.includes('ส่งเสริมสุขภาพ')) return 'bg-emerald-100 text-emerald-700 border-emerald-200';
+                return 'bg-slate-100 text-slate-700 border-slate-200';
+            };
+
+            const renderTypeSummary = (subset) => {
+                const counts = {};
+                subset.forEach(d => counts[d.hosp_type_detail] = (counts[d.hosp_type_detail] || 0) + 1);
+                return Object.entries(counts).sort((a,b) => b[1]-a[1]).map(([type, count]) => `
+                    <span class="text-[10px] font-black px-3 py-1 rounded-full border shadow-sm ${getBadgeStyles(type)}">
+                        ${type} : ${count}
+                    </span>
+                `).join('');
+            };
+
+            document.getElementById('mueangTypeSummary').innerHTML = renderTypeSummary(latestData.filter(d => d['อำเภอ']?.includes('เมือง')));
+            document.getElementById('otherTypeSummary').innerHTML = renderTypeSummary(latestData.filter(d => !d['อำเภอ']?.includes('เมือง')));
+
+            const total = latestData.length;
+            const sent = latestData.filter(d => d.is_sent).length;
+            const ontime = latestData.filter(d => d.kpi?.includes('ทันเวลา>')).length;
+            const zero = latestData.filter(d => d.kpi?.includes('Zero')).length;
+            const missing = total - sent;
+
+            document.getElementById('statRate').innerText = `${((sent/total)*100).toFixed(1)}%`;
+            document.getElementById('statCount').innerText = `${sent}/${total} แห่ง`;
+            document.getElementById('statOnTime').innerText = `${((ontime/total)*100).toFixed(1)}%`;
+            document.getElementById('statZero').innerText = zero;
+            document.getElementById('statMissing').innerText = missing;
+
+            const isSub = d => {
+                const t = d.hosp_type_detail || '';
+                return t.includes('ส่งเสริมสุขภาพ') || t.includes('รพ.สต.') || t.includes('ศสม.') || t.includes('บริการ');
+            };
+
+            const mainHosp = latestData.filter(d => !isSub(d));
+            const subStats = {};
+            [...new Set(latestData.map(d => d['อำเภอ']))].filter(Boolean).forEach(amp => {
+                const subs = latestData.filter(d => d['อำเภอ'] === amp && isSub(d));
+                subStats[amp] = {
+                    total: subs.length,
+                    sent: subs.filter(d => d.is_sent).length,
+                    late: subs.filter(d => d.kpi?.includes('ทันเวลา<')).length,
+                    missing: subs.filter(d => !d.is_sent).length
+                };
+            });
+
+            const ampRate = {};
+            Object.keys(subStats).forEach(amp => {
+                const mains = mainHosp.filter(d => d['อำเภอ'] === amp);
+                const t = mains.length + subStats[amp].total;
+                const s = mains.filter(d => d.is_sent).length + subStats[amp].sent;
+                ampRate[amp] = t > 0 ? (s/t)*100 : 0;
+            });
+
+            const getStatusBadge = (kpi, sent) => {
+                if (!sent) return 'bg-rose-600 text-white';
+                if (kpi.includes('ทันเวลา>')) return 'bg-emerald-600 text-white';
+                if (kpi.includes('Zero')) return 'bg-blue-600 text-white';
+                if (kpi.includes('ทันเวลา<')) return 'bg-orange-600 text-white';
+                return 'bg-slate-400 text-white';
+            };
+
+            const getRowBg = (kpi, sent) => {
+                if (!sent) return 'row-missing';
+                if (kpi.includes('ทันเวลา>')) return 'row-sent-ontime';
+                if (kpi.includes('Zero')) return 'row-sent-zero';
+                if (kpi.includes('ทันเวลา<')) return 'row-sent-late';
+                return '';
+            };
+
+            // Part 1: Mueang
+            const mueangRows = mainHosp.filter(d => d['อำเภอ']?.includes('เมือง')).sort((a,b) => {
+                const rank = h => h['สถานพยาบาล'].includes('อุดรธานี') ? 1 : 2;
+                return rank(a) - rank(b);
+            });
+
+            let mueangHTML = '';
+            mueangRows.forEach(d => {
+                const isUdon = d['สถานพยาบาล'].includes('อุดรธานี');
+                const subs = isUdon ? subStats[d['อำเภอ']] : { total: '-', sent: '-', late: '-', missing: '-' };
+                mueangHTML += `
+                    <tr class="${getRowBg(d.kpi, d.is_sent)}">
+                        <!-- รวมคอลัมน์ชื่อโรงพยาบาลและสถานะเพื่อให้ช่องสถิติด้านหลังตรงกัน -->
+                        <td colspan="2" class="px-4 py-3 v-divider">
+                            <span class="text-base font-bold mr-2">${d['สถานพยาบาล']}</span>
+                            <span class="px-1.5 py-0.5 rounded text-[8px] font-black uppercase inline-block align-middle ${getStatusBadge(d.kpi, d.is_sent)}">${d.kpi || 'ยังไม่ส่ง'}</span>
+                        </td>
+                        <td class="px-4 py-3 text-center text-slate-500">${subs.total}</td>
+                        <td class="px-4 py-3 text-center ${subs.sent === subs.total && subs.total !== '-' ? 'text-emerald-700' : ''}">${subs.sent}</td>
+                        <td class="px-4 py-3 text-center text-orange-600">${subs.late}</td>
+                        <td class="px-4 py-3 text-center text-rose-600">${subs.missing}</td>
+                    </tr>`;
+            });
+            document.getElementById('mueangTableBody').innerHTML = mueangHTML;
+
+            // Part 2: Others
+            const otherRows = mainHosp.filter(d => !d['อำเภอ']?.includes('เมือง')).sort((a,b) => ampRate[b['อำเภอ']] - ampRate[a['อำเภอ']]);
+            let otherHTML = '';
+            let currentAmp = '';
+            otherRows.forEach((d, i) => {
+                const isNew = currentAmp !== d['อำเภอ'];
+                currentAmp = d['อำเภอ'];
+                const subs = isNew ? subStats[d['อำเภอ']] : { total: '"', sent: '"', late: '"', missing: '"' };
+                let ampDisplay = '';
+                if (isNew) {
+                    const r = ampRate[d['อำเภอ']];
+                    const rClass = r >= 80 ? 'bg-emerald-600 text-white' : 'bg-amber-100 text-amber-700 border border-amber-200';
+                    ampDisplay = `
+                        <div class="flex items-center gap-2 py-1 flex-nowrap whitespace-nowrap overflow-hidden">
+                            <div class="h-6 w-10 bg-white rounded border flex-shrink-0"><canvas id="spark-${d['อำเภอ'].replace(/\s+/g, '-')}"></canvas></div>
+                            <span class="font-black text-[11px] text-slate-700 truncate" title="${d['อำเภอ']}">${d['อำเภอ']}</span>
+                            <span class="text-[8px] px-1 rounded font-black shadow-sm ${rClass}">${r.toFixed(0)}%</span>
+                        </div>`;
+                }
+
+                otherHTML += `
+                    <tr class="${getRowBg(d.kpi, d.is_sent)} ${isNew && i!==0 ? 'border-t-2 border-slate-200' : ''}">
+                        <td class="px-4 py-2">${ampDisplay || '<div class="text-center opacity-20 text-lg">"</div>'}</td>
+                        <td class="px-4 py-2 v-divider">
+                            <span class="mr-1 font-bold text-slate-700">${d['สถานพยาบาล']}</span>
+                            <span class="px-1.5 py-0.5 rounded text-[8px] font-black uppercase inline-block align-middle ${getStatusBadge(d.kpi, d.is_sent)}">${d.kpi || 'ยังไม่ส่ง'}</span>
+                        </td>
+                        <td class="px-4 py-2 text-center text-slate-500">${subs.total}</td>
+                        <td class="px-4 py-2 text-center ${subs.sent === subs.total && subs.total !== '"' ? 'text-emerald-700' : ''}">${subs.sent}</td>
+                        <td class="px-4 py-2 text-center text-orange-600">${subs.late}</td>
+                        <td class="px-4 py-2 text-center text-rose-600">${subs.missing}</td>
+                    </tr>`;
+            });
+            document.getElementById('otherTableBody').innerHTML = otherHTML;
+
+            // Bar Sparklines for Others
+            const last5Weeks = allWeeks.slice(-5);
+            [...new Set(otherRows.map(d => d['อำเภอ']))].forEach(amp => {
+                const ctx = document.getElementById(`spark-${amp.replace(/\s+/g, '-')}`);
+                if (ctx) {
+                    const trend = last5Weeks.map(w => {
+                        const wData = data.filter(d => d['อำเภอ'] === amp && d.week === w);
+                        return wData.length ? (wData.filter(d => d.is_sent).length / wData.length) * 100 : 0;
+                    });
+                    new Chart(ctx, {
+                        type: 'bar', data: { labels: last5Weeks, datasets: [{ data: trend, backgroundColor: trend.map(v => v>=80?'#10b981':'#f59e0b') }] },
+                        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: false, tooltip: false }, scales: { x: { display: false }, y: { display: false, min: 0, max: 100 } } }
+                    });
+                }
+            });
+
+            // Missing 3 Weeks
+            const last3 = allWeeks.slice(-3);
+            const listEl = document.getElementById('missingListContainer');
+            if (last3.length >= 3) {
+                const missingNow = latestData.filter(d => !d.is_sent);
+                const conMissing = missingNow.filter(h => !data.some(d => d['สถานพยาบาล'] === h['สถานพยาบาล'] && d['อำเภอ'] === h['อำเภอ'] && last3.includes(d.week) && d.is_sent));
+                document.getElementById('missingBadge').innerText = `${conMissing.length} แห่ง`;
+                
+                if (conMissing.length === 0) {
+                    listEl.innerHTML = `<div class="p-6 text-center text-emerald-500 font-black border-2 border-dashed border-emerald-100 rounded-2xl text-sm">ข้อมูลครบถ้วน</div>`;
+                } else {
+                    const group = {};
+                    conMissing.forEach(h => group[h['อำเภอ']] = (group[h['อำเภอ']] || 0) + 1);
+                    const sorted = Object.entries(group).sort((a,b) => b[1]-a[1]);
+                    const renderCol = (arr) => `
+                        <div class="border rounded-2xl overflow-hidden bg-white">
+                            <table class="w-full text-left text-xs">
+                                <thead class="bg-slate-50 border-b"><tr><th class="px-4 py-2 text-center">อำเภอ</th><th class="px-4 py-2 text-center">จำนวนหน่วยบริการ</th></tr></thead>
+                                <tbody class="divide-y divide-slate-50">${arr.map(([a,c]) => `<tr><td class="px-4 py-2 border-l-4 border-rose-500 font-bold">${a}</td><td class="px-4 py-2 text-center text-rose-600 font-black">${c}</td></tr>`).join('')}</tbody>
+                            </table>
+                        </div>`;
+                    const half = Math.ceil(sorted.length / 2);
+                    listEl.innerHTML = `<div class="grid grid-cols-2 gap-4">${renderCol(sorted.slice(0, half))}${sorted.length > half ? renderCol(sorted.slice(half)) : '<div></div>'}</div>`;
+                }
+            } else {
+                listEl.innerHTML = `<div class="p-6 text-center text-slate-400 font-bold text-xs italic">ข้อมูลไม่เพียงพอ</div>`;
+            }
+
+            // History Chart
+            const hist = { on: [], zero: [], late: [], miss: [] };
+            allWeeks.forEach(w => {
+                const wd = data.filter(d => d.week === w);
+                hist.on.push(wd.filter(d => d.kpi?.includes('ทันเวลา>')).length);
+                hist.zero.push(wd.filter(d => d.kpi?.includes('Zero')).length);
+                hist.late.push(wd.filter(d => d.kpi?.includes('ทันเวลา<')).length);
+                hist.miss.push(wd.filter(d => !d.is_sent).length);
+            });
+
+            if (currentCharts.hist) currentCharts.hist.destroy();
+            currentCharts.hist = new Chart(document.getElementById('historyChart'), {
+                type: 'line',
+                data: {
+                    labels: allWeeks.map(w => 'W' + w),
+                    datasets: [
+                        { label: 'ทันเวลา', data: hist.on, borderColor: '#10b981', tension: 0.4, fill: false, pointRadius: 3 },
+                        { label: 'Zero', data: hist.zero, borderColor: '#3b82f6', tension: 0.4, fill: false, pointRadius: 3 },
+                        { label: 'ช้า', data: hist.late, borderColor: '#f59e0b', tension: 0.4, borderDash: [5,5], pointRadius: 3 },
+                        { label: 'ไม่ส่ง', data: hist.miss, borderColor: '#f43f5e', tension: 0.4, fill: false, pointRadius: 3 }
+                    ]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 10 } } } }
+                }
+            });
+        }
+    </script>
+</body>
+</html>
